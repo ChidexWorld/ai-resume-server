@@ -3,6 +3,7 @@ FastAPI application configuration for Employee-Employer Matching System.
 """
 import os
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import List
 
 
@@ -39,6 +40,7 @@ class Settings(BaseSettings):
     
     # Matching settings
     default_match_limit: int = 50
+    minimum_match_score: int = 70  # Add this field that's in your .env
     score_weights: dict = {
         "skills": 0.4,
         "experience": 0.3,
@@ -46,12 +48,18 @@ class Settings(BaseSettings):
         "communication": 0.1
     }
     
-    # CORS settings
-    cors_origins: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000"
-    ]
+    # CORS settings - use Field to map environment variable
+    cors_origins_str: str = Field(
+        default="http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000",
+        alias="cors_origins"
+    )
+    
+    @property
+    def cors_origins(self) -> List[str]:
+        """Convert comma-separated CORS origins string to list."""
+        if not self.cors_origins_str:
+            return ["http://localhost:3000"]
+        return [origin.strip() for origin in self.cors_origins_str.split(',') if origin.strip()]
     
     @property
     def database_url(self) -> str:
