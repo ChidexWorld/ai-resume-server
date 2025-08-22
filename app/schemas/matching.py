@@ -56,4 +56,4 @@ class MatchingStatsResponse(BaseModel):
     high_score_matches: int
     average_match_score: float
     dismissed_matches: Optional[int] = None
-    active_job_postings: Optional[int] = None
+    active_job_postings: Optional[int] = None   

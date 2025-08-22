@@ -2,7 +2,7 @@
 Schema package initialization.
 """
 from app.schemas.auth import UserCreate, UserResponse, Token, UserUpdate
-from app.schemas.employee import ResumeResponse, VoiceAnalysisResponse, ApplicationCreate, ApplicationResponse
+from app.schemas.employer import ApplicationCreate, ApplicationResponse, VoiceAnalysisResponse, ResumeResponse
 
 __all__ = [
     "UserCreate",

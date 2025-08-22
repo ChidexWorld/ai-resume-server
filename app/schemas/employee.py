@@ -46,7 +46,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     
     # Employer-specific fields
-    company_name: Optional[str] = None
+    company_name: Optional[str] = None  
     company_website: Optional[str] = None
     company_size: Optional[str] = None
     
