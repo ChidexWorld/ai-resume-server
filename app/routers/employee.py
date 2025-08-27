@@ -12,10 +12,10 @@ from app.models import User, Resume, VoiceAnalysis, Application, JobPosting, Use
 from app.routers.auth import get_current_active_user
 from app.services.ai_service import ai_service
 from app.services.file_service import FileService
-from app.schemas.employee import (
-    ResumeResponse, VoiceAnalysisResponse, ApplicationCreate, ApplicationResponse,
-    JobRecommendationResponse
+from app.schemas.employer import (
+    ResumeResponse, VoiceAnalysisResponse, ApplicationCreate, ApplicationResponse
 )
+from app.schemas.matching import JobRecommendationResponse
 from app.config import settings
 
 # Create router

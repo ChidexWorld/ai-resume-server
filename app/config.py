@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     
     # Database settings
-    mysql_host: str = "localhost"
-    mysql_port: int = 3306
-    mysql_user: str = "root"
-    mysql_password: str = "password"
-    mysql_database: str = "employee_employer_matching"
+    mysql_host: str 
+    mysql_port: int 
+    mysql_user: str
+    mysql_password: str 
+    mysql_database: str
     
     # File upload settings
     max_file_size: int = 25 * 1024 * 1024  # 25MB
@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore" 
 
 
 # Global settings instance
