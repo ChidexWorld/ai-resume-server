@@ -32,13 +32,30 @@ def verify_employer_user(current_user: User = Depends(get_current_active_user)) 
     return current_user
 
 
-@router.post("/jobs", response_model=JobPostingResponse)
+@router.post(
+    "/jobs", 
+    response_model=JobPostingResponse,
+    summary="Create Job Posting",
+    description="Create a new job posting with requirements and matching criteria for AI-powered candidate matching.",
+    response_description="Created job posting with unique ID and matching configuration"
+)
 async def create_job_posting(
     job_data: JobPostingCreate,
     current_user: User = Depends(verify_employer_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new job posting."""
+    """
+    Create a new job posting.
+    
+    Define job requirements and AI matching criteria:
+    - **Basic Info**: Title, description, location, salary range
+    - **Required Skills**: Technical skills candidates must have
+    - **Experience**: Minimum years and relevant areas
+    - **Education**: Degree requirements and preferred fields
+    - **Communication**: Voice analysis requirements for role
+    
+    The AI system will use these criteria to automatically match and rank candidates.
+    """
     try:
         # Create job posting
         job_posting = JobPosting(

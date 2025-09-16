@@ -32,30 +32,29 @@ async def generate_job_matches(
     db: Session = Depends(get_db)
 ):
     """Generate AI matches for a job posting."""
-    try:
-        # Get job posting and verify access
-        job = db.query(JobPosting).filter(JobPosting.id == job_id).first()
-        
-        if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Job posting not found"
-            )
-        
-        # Verify access (job owner or admin)
-        if current_user.user_type == UserType.EMPLOYER and job.employer_id != current_user.id:
+    # Get job posting and verify access
+    job = db.query(JobPosting).filter(JobPosting.id == job_id).first()
+    
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job posting not found"
+        )
+    
+    # Verify access (job owner or admin)
+    if current_user.user_type == UserType.EMPLOYER and job.employer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this job posting"
         )
-    
+
     # Build query
     query = db.query(JobMatch).filter(JobMatch.job_posting_id == job_id, JobMatch.is_recommended == True)
     
     if min_score is not None:
         query = query.filter(JobMatch.match_score >= min_score)
     
-    matches = query.order_by(desc(JobMatch.match_score)).offset(offset).limit(limit).all()
+    matches = query.order_by(desc(JobMatch.match_score)).limit(limit).all()
     
     # Prepare response with candidate data
     response_data = []
@@ -419,99 +418,4 @@ async def generate_bulk_matches(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Bulk match generation failed: {str(e)}"
-        )_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this job posting"
-            )
-        
-        # Get job requirements
-        job_requirements = job.get_matching_criteria()
-        
-        # Get all active resumes for matching
-        resumes = db.query(Resume).join(User).filter(
-            User.user_type == UserType.EMPLOYEE,
-            User.is_active == True,
-            Resume.status == "analyzed",
-            Resume.is_active == True
-        ).limit(500).all()  # Limit for performance
-        
-        matches_created = 0
-        total_candidates = len(resumes)
-        
-        for resume in resumes:
-            try:
-                # Skip if already matched
-                existing_match = db.query(JobMatch).filter(
-                    JobMatch.employee_id == resume.employee_id,
-                    JobMatch.job_posting_id == job_id
-                ).first()
-                
-                if existing_match:
-                    continue
-                
-                # Calculate match score
-                resume_data = resume.to_dict(include_analysis=True)
-                match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
-                match_score = match_result["overall_score"]
-                
-                # Create match if score is above threshold
-                if match_score >= min_score:
-                    job_match = JobMatch(
-                        employee_id=resume.employee_id,
-                        job_posting_id=job_id,
-                        resume_id=resume.id,
-                        match_score=match_score,
-                        match_details=match_result["match_details"]
-                    )
-                    
-                    db.add(job_match)
-                    matches_created += 1
-                    
-                    if matches_created >= limit:
-                        break
-                        
-            except Exception as e:
-                print(f"Error matching resume {resume.id}: {e}")
-                continue
-        
-        db.commit()
-        
-        return BatchMatchingResponse(
-            job_id=job_id,
-            total_candidates_analyzed=total_candidates,
-            matches_created=matches_created,
-            min_score_threshold=min_score,
-            message=f"Generated {matches_created} matches from {total_candidates} candidates"
         )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Match generation failed: {str(e)}"
-        )
-
-
-@router.get("/job-matches/{job_id}", response_model=List[CandidateMatchResponse])
-async def get_job_matches(
-    job_id: int,
-    min_score: Optional[int] = Query(None, ge=0, le=100),
-    limit: int = Query(50, le=100),
-    offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Get AI-generated matches for a job posting."""
-    # Verify job access
-    job = db.query(JobPosting).filter(JobPosting.id == job_id).first()
-    
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job posting not found"
-        )
-    
-    if current_user.user_type == UserType.EMPLOYER and job.employer

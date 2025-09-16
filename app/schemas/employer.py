@@ -1,10 +1,11 @@
 """
-Pydantic schemas for employee endpoints.
+Pydantic schemas for employer endpoints.
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, validator
 from app.models.application import ApplicationStatus
+from app.models.job_posting import JobStatus, ExperienceLevel, JobType
 
 
 class ResumeResponse(BaseModel):
@@ -155,3 +156,128 @@ class EmployeeProfileResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# Job Posting Schemas
+class JobPostingCreate(BaseModel):
+    """Schema for creating job postings."""
+    title: str
+    description: str
+    department: Optional[str] = None
+    location: str
+    remote_allowed: bool = False
+    job_type: JobType
+    experience_level: ExperienceLevel
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    benefits: Optional[str] = None
+    
+    # Requirements
+    required_skills: List[str]
+    preferred_skills: Optional[List[str]] = None
+    required_experience: Optional[Dict[str, Any]] = None
+    required_education: Optional[Dict[str, Any]] = None
+    
+    # Matching criteria
+    communication_requirements: Optional[Dict[str, Any]] = None
+    minimum_match_score: int = 70
+    
+    @validator('title')
+    def validate_title(cls, v):
+        if len(v.strip()) < 3:
+            raise ValueError('Job title must be at least 3 characters long')
+        return v.strip()
+    
+    @validator('description')
+    def validate_description(cls, v):
+        if len(v.strip()) < 50:
+            raise ValueError('Job description must be at least 50 characters long')
+        return v.strip()
+
+
+class JobPostingUpdate(BaseModel):
+    """Schema for updating job postings."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    department: Optional[str] = None
+    location: Optional[str] = None
+    remote_allowed: Optional[bool] = None
+    job_type: Optional[JobType] = None
+    experience_level: Optional[ExperienceLevel] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    benefits: Optional[str] = None
+    required_skills: Optional[List[str]] = None
+    preferred_skills: Optional[List[str]] = None
+    status: Optional[JobStatus] = None
+    minimum_match_score: Optional[int] = None
+
+
+class JobPostingResponse(BaseModel):
+    """Schema for job posting data in responses."""
+    id: int
+    employer_id: int
+    title: str
+    description: str
+    department: Optional[str]
+    location: str
+    remote_allowed: bool
+    job_type: JobType
+    experience_level: ExperienceLevel
+    salary_min: Optional[int]
+    salary_max: Optional[int]
+    benefits: Optional[str]
+    required_skills: List[str]
+    preferred_skills: Optional[List[str]]
+    required_experience: Optional[Dict[str, Any]]
+    required_education: Optional[Dict[str, Any]]
+    communication_requirements: Optional[Dict[str, Any]]
+    minimum_match_score: int
+    status: JobStatus
+    applications_count: int
+    matches_count: int
+    created_at: str
+    updated_at: str
+    
+    # Related data
+    employer: Optional[Dict[str, Any]]
+    
+    class Config:
+        from_attributes = True
+
+
+class ApplicationReviewResponse(BaseModel):
+    """Schema for application review data."""
+    application_id: int
+    employee: Dict[str, Any]
+    resume_analysis: Optional[Dict[str, Any]]
+    voice_analysis: Optional[Dict[str, Any]]
+    match_score: int
+    match_details: Dict[str, Any]
+    status: ApplicationStatus
+    applied_at: str
+
+
+class CandidateSearchResponse(BaseModel):
+    """Schema for candidate search results."""
+    employee_id: int
+    employee: Dict[str, Any]
+    resume_analysis: Optional[Dict[str, Any]]
+    voice_analysis: Optional[Dict[str, Any]]
+    match_score: Optional[int]
+    match_details: Optional[Dict[str, Any]]
+
+
+class InterviewSchedule(BaseModel):
+    """Schema for scheduling interviews."""
+    application_id: int
+    interview_date: datetime
+    interview_type: str  # "video", "phone", "in_person"
+    location_or_link: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ApplicationStatusUpdate(BaseModel):
+    """Schema for updating application status."""
+    status: ApplicationStatus
+    notes: Optional[str] = None

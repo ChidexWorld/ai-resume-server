@@ -31,7 +31,7 @@ A comprehensive FastAPI backend that uses AI to match employees with employers b
 ```bash
 # Clone repository
 git clone <your-repo-url>
-cd employee-employer-matching
+cd ai-resume-server
 
 # Create virtual environment
 python -m venv venv
@@ -59,9 +59,9 @@ python -m spacy download en_core_web_sm
 ```bash
 # Install MySQL and create database
 mysql -u root -p
-CREATE DATABASE employee_employer_matching;
-CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON employee_employer_matching.* TO 'app_user'@'localhost';
+CREATE DATABASE your_database_name;
+CREATE USER 'your_user'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON your_database_name.* TO 'your_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -78,19 +78,32 @@ nano .env
 **Required .env settings:**
 ```env
 # Database
-MYSQL_HOST=localhost
+MYSQL_HOST=your-mysql-host
 MYSQL_PORT=3306
-MYSQL_USER=app_user
-MYSQL_PASSWORD=your_password
-MYSQL_DATABASE=employee_employer_matching
+MYSQL_USER=your-mysql-user
+MYSQL_PASSWORD=your-secure-password
+MYSQL_DATABASE=your-database-name
 
 # Security
 SECRET_KEY=your-super-secret-key-here
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
+ALGORITHM=HS256
 
-# AI Settings
+# File Upload Settings
+MAX_FILE_SIZE=26214400
+UPLOAD_FOLDER=uploads
+
+# AI/ML Model Settings
 WHISPER_MODEL=base
+MAX_AUDIO_DURATION=600
 SIMILARITY_THRESHOLD=0.7
+
+# Matching Algorithm Settings
+DEFAULT_MATCH_LIMIT=50
+MINIMUM_MATCH_SCORE=70
+
+# CORS Settings
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000
 
 # Development
 DEBUG=True
@@ -98,8 +111,9 @@ DEBUG=True
 
 ### **5. Run Application**
 ```bash
-# Start the server
-python main.py
+# Recommended: Use the startup script
+chmod +x start_server.sh
+./start_server.sh
 
 # Or with uvicorn directly
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -294,7 +308,7 @@ Query Parameters:
 ## 🛠️ **Project Structure**
 
 ```
-employee-employer-matching/
+ai-resume-server/
 ├── app/
 │   ├── models/              # SQLAlchemy database models
 │   │   ├── user.py         # User model (employees & employers)
@@ -388,6 +402,8 @@ curl -X POST http://localhost:8000/api/auth/register \
 1. **Use Production Database**
    ```env
    MYSQL_HOST=your-production-host
+   MYSQL_PASSWORD=your-secure-production-password
+   SECRET_KEY=your-production-secret-key
    DEBUG=False
    ```
 
@@ -399,9 +415,9 @@ curl -X POST http://localhost:8000/api/auth/register \
 
 3. **Environment Variables**
    ```env
-   SECRET_KEY=production-secret-key
-   MYSQL_PASSWORD=secure-production-password
-   CORS_ORIGINS=["https://yourdomain.com"]
+   SECRET_KEY=your-production-secret-key
+   MYSQL_PASSWORD=your-secure-production-password
+   CORS_ORIGINS=https://yourdomain.com
    ```
 
 ### **Docker Deployment**

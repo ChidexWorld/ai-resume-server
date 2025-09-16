@@ -2,6 +2,7 @@
 Employee router for resume upload, voice analysis, and job applications.
 """
 import os
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
@@ -15,7 +16,7 @@ from app.services.file_service import FileService
 from app.schemas.employer import (
     ResumeResponse, VoiceAnalysisResponse, ApplicationCreate, ApplicationResponse
 )
-from app.schemas.matching import JobRecommendationResponse
+from app.schemas.matching import JobMatchResponse
 from app.config import settings
 
 # Create router
@@ -35,15 +36,32 @@ def verify_employee_user(current_user: User = Depends(get_current_active_user)) 
     return current_user
 
 
-@router.post("/resume/upload", response_model=ResumeResponse)
+@router.post(
+    "/resume/upload", 
+    response_model=ResumeResponse,
+    summary="Upload Resume",
+    description="Upload resume file (PDF, DOCX, TXT) for AI analysis and skill extraction.",
+    response_description="Resume analysis results including extracted skills, experience, and education"
+)
 async def upload_resume(
-    file: UploadFile = File(...),
+    file: UploadFile = File(..., description="Resume file (PDF, DOCX, or TXT format, max 25MB)"),
     current_user: User = Depends(verify_employee_user),
     db: Session = Depends(get_db)
 ):
     """
     Upload and analyze a resume file.
-    Supports PDF, DOC, DOCX, and TXT formats.
+    
+    - **file**: Resume document in PDF, DOCX, or TXT format
+    - **Max size**: 25MB
+    
+    AI analysis extracts:
+    - Contact information (email, phone, location)  
+    - Skills (technical and soft skills)
+    - Work experience and job history
+    - Education (degrees, institutions, certifications)
+    - Professional summary
+    
+    Returns detailed analysis results and skill matching data.
     """
     try:
         # Validate file type
@@ -510,7 +528,7 @@ async def get_application(
     return ApplicationResponse.from_orm(application)
 
 
-@router.get("/job-recommendations", response_model=List[JobRecommendationResponse])
+@router.get("/job-recommendations", response_model=List[JobMatchResponse])
 async def get_job_recommendations(
     limit: int = 20,
     min_score: int = 70,
@@ -561,12 +579,14 @@ async def get_job_recommendations(
         
         # Return top recommendations
         return [
-            JobRecommendationResponse(
+            JobMatchResponse(
+                match_id=i+1,  # Generate temporary ID
                 job=rec["job"],
                 match_score=rec["match_score"],
-                match_details=rec["match_details"]
+                match_details=rec["match_details"],
+                created_at=datetime.now().isoformat()
             )
-            for rec in recommendations[:limit]
+            for i, rec in enumerate(recommendations[:limit])
         ]
         
     except Exception as e:

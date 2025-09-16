@@ -39,6 +39,12 @@ class UserCreate(BaseModel):
         return v
 
 
+class UserLogin(BaseModel):
+    """Schema for user login."""
+    email: EmailStr
+    password: str
+
+
 class UserUpdate(BaseModel):
     """Schema for user profile updates."""
     first_name: Optional[str] = None

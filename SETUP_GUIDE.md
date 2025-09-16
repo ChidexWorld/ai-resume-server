@@ -13,13 +13,34 @@ The AI Resume Server is a FastAPI-based application that provides an intelligent
 
 ### 1. Environment Setup
 
-Your `.env` file is already configured with:
+Configure your `.env` file with:
 ```env
-DB_HOST=your host
-DB_PORT=23241
-DB_USER=user
-DB_PASSWORD=
-DB_NAME=resume
+MYSQL_HOST=your-mysql-host
+MYSQL_PORT=3306
+MYSQL_USER=your-mysql-user
+MYSQL_PASSWORD=your-secure-password
+MYSQL_DATABASE=your-database-name
+
+# Security Settings
+SECRET_KEY=your-super-secret-key-change-in-production
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+ALGORITHM=HS256
+
+# File Upload Settings
+MAX_FILE_SIZE=26214400
+UPLOAD_FOLDER=uploads
+
+# AI/ML Model Settings
+WHISPER_MODEL=base
+MAX_AUDIO_DURATION=600
+SIMILARITY_THRESHOLD=0.7
+
+# Matching Algorithm Settings
+DEFAULT_MATCH_LIMIT=50
+MINIMUM_MATCH_SCORE=70
+
+# CORS Settings
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000
 ```
 
 ### 2. Install Dependencies
@@ -37,24 +58,29 @@ pip install -r requirements.txt
 ```bash
 # Run migrations (this will create all necessary tables)
 python -m alembic upgrade head
-
-# Or use the development runner (recommended)
-python run_dev.py
 ```
 
 ### 4. Start the Application
 
-**Option 1: Using the development runner (recommended)**
+**Option 1: Using the startup script (recommended)**
 ```bash
-python run_dev.py
+# Make script executable (first time only)
+chmod +x start_server.sh
+
+# Start the server with clean environment
+./start_server.sh
 ```
 
 **Option 2: Using uvicorn directly**
 ```bash
-python main.py
+# Clear any conflicting environment variables first
+unset MAX_FILE_SIZE MAX_AUDIO_DURATION SIMILARITY_THRESHOLD MINIMUM_MATCH_SCORE
+
+# Start server
+uvicorn main:app --reload
 ```
 
-**Option 3: Using uvicorn command**
+**Option 3: Using uvicorn command with custom host/port**
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -73,12 +99,12 @@ Once running, access these URLs:
 Run the test suite to verify everything is working:
 
 ```bash
-python test_app.py
-```
+# Run tests with pytest (install if needed)
+pip install pytest pytest-asyncio httpx
+pytest
 
-Expected output:
-```
-🎉 All tests passed! The application is ready to run.
+# Or run tests with coverage
+pytest --cov=app tests/
 ```
 
 ## 📁 Project Structure
@@ -95,9 +121,10 @@ ai-resume-server/
 ├── alembic/             # Database migration files
 ├── uploads/             # File upload storage
 ├── main.py              # Application entry point
-├── run_dev.py          # Development server runner
-├── test_app.py         # Application tests
-└── requirements.txt     # Python dependencies
+├── start_server.sh      # Server startup script
+├── requirements.txt     # Python dependencies
+├── .env                 # Environment variables (create from .env.example)
+└── .env.example        # Environment variables template
 ```
 
 ## 🔧 API Endpoints
@@ -181,11 +208,21 @@ The application uses the following main entities:
 
 ### Common Issues
 
-**1. Database Connection Error**
+**1. Environment Variable Parsing Errors**
+```bash
+# Error: ValidationError for Settings (int_parsing, float_parsing)
+# Solution: Clear conflicting system environment variables
+unset MAX_FILE_SIZE MAX_AUDIO_DURATION SIMILARITY_THRESHOLD MINIMUM_MATCH_SCORE
+
+# Or use the startup script which handles this automatically
+./start_server.sh
+```
+
+**2. Database Connection Error**
 ```bash
 # Check if MySQL service is running
 # Verify .env database credentials
-python -c "from app.config import settings; print(settings.database_url)"
+python -c "from app.config import settings; print('Database configured:', settings.mysql_host)"
 ```
 
 **2. AI Model Loading Issues**
@@ -198,10 +235,10 @@ python -c "from sentence_transformers import SentenceTransformer; SentenceTransf
 **3. Import Errors**
 ```bash
 # Run the test suite
-python test_app.py
+pytest
 
 # Check specific imports
-python -c "import main; print('✅ OK')"
+python -c "from app.config import settings; from main import app; print('✅ Application loads successfully')"
 ```
 
 **4. Migration Issues**
@@ -239,10 +276,11 @@ python -m alembic upgrade head
 
 ```bash
 # Run tests
-python test_app.py
+pytest
 
-# Test specific endpoint
-curl http://localhost:8000/api/health
+# Test API endpoints
+curl http://localhost:8000/
+curl http://localhost:8000/docs
 ```
 
 ## 📈 Production Deployment
