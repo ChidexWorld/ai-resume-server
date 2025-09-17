@@ -51,6 +51,8 @@ class VoiceAnalysisResponse(BaseModel):
 class ApplicationCreate(BaseModel):
     """Schema for creating job applications."""
     job_id: int
+    resume_id: Optional[int] = None
+    voice_analysis_id: Optional[int] = None
     cover_letter: Optional[str] = None
     expected_salary: Optional[int] = None  # In cents
     availability_date: Optional[datetime] = None
@@ -170,17 +172,25 @@ class JobPostingCreate(BaseModel):
     experience_level: ExperienceLevel
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
+    currency: Optional[str] = "USD"
     benefits: Optional[str] = None
-    
+
     # Requirements
     required_skills: List[str]
     preferred_skills: Optional[List[str]] = None
     required_experience: Optional[Dict[str, Any]] = None
     required_education: Optional[Dict[str, Any]] = None
-    
+
     # Matching criteria
     communication_requirements: Optional[Dict[str, Any]] = None
+    matching_weights: Optional[Dict[str, Any]] = None
     minimum_match_score: int = 70
+
+    # Additional settings
+    is_urgent: bool = False
+    max_applications: Optional[int] = None
+    auto_match_enabled: bool = True
+    expires_at: Optional[datetime] = None
     
     @validator('title')
     def validate_title(cls, v):
@@ -248,24 +258,18 @@ class JobPostingResponse(BaseModel):
 
 class ApplicationReviewResponse(BaseModel):
     """Schema for application review data."""
-    application_id: int
-    employee: Dict[str, Any]
+    application: Dict[str, Any]
+    employee: Optional[Dict[str, Any]]
     resume_analysis: Optional[Dict[str, Any]]
     voice_analysis: Optional[Dict[str, Any]]
-    match_score: int
-    match_details: Dict[str, Any]
-    status: ApplicationStatus
-    applied_at: str
 
 
 class CandidateSearchResponse(BaseModel):
     """Schema for candidate search results."""
-    employee_id: int
     employee: Dict[str, Any]
     resume_analysis: Optional[Dict[str, Any]]
     voice_analysis: Optional[Dict[str, Any]]
-    match_score: Optional[int]
-    match_details: Optional[Dict[str, Any]]
+    match_summary: Optional[Dict[str, Any]]
 
 
 class InterviewSchedule(BaseModel):

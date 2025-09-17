@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
 from app.database import get_db
-from app.models import User, JobPosting, Resume, VoiceAnalysis, Application, JobMatch, UserType
+from app.models import User, JobPosting, Resume, VoiceAnalysis, Application, JobMatch, UserType, JobStatus, ApplicationStatus
 from app.routers.auth import get_current_active_user
-from app.schemas.admin import SystemStatsResponse, UserManagementResponse, ContentModerationResponse
+from app.schemas.admin import SystemStatsResponse, UserManagementResponse
 
 # Create router
 router = APIRouter()
@@ -43,7 +43,7 @@ async def get_system_statistics(
         
         # Job posting statistics
         total_jobs = db.query(JobPosting).count()
-        active_jobs = db.query(JobPosting).filter(JobPosting.status == "active").count()
+        active_jobs = db.query(JobPosting).filter(JobPosting.status == JobStatus.ACTIVE).count()
         
         # Resume statistics
         total_resumes = db.query(Resume).filter(Resume.is_active == True).count()
@@ -62,7 +62,7 @@ async def get_system_statistics(
         # Application statistics
         total_applications = db.query(Application).count()
         pending_applications = db.query(Application).filter(
-            Application.status == "pending"
+            Application.status == ApplicationStatus.PENDING
         ).count()
         
         # Match statistics
@@ -251,7 +251,7 @@ async def get_content_for_moderation(
             query = db.query(JobPosting)
             if flagged_only:
                 # Filter for potentially problematic jobs
-                query = query.filter(JobPosting.status == "paused")
+                query = query.filter(JobPosting.status == JobStatus.PAUSED)
             
             items = query.order_by(desc(JobPosting.created_at)).limit(limit).all()
             content_data = [job.to_dict(include_requirements=False) for job in items]
@@ -259,7 +259,7 @@ async def get_content_for_moderation(
         elif content_type == "applications":
             query = db.query(Application)
             if flagged_only:
-                query = query.filter(Application.status == "rejected")
+                query = query.filter(Application.status == ApplicationStatus.REJECTED)
             
             items = query.order_by(desc(Application.applied_at)).limit(limit).all()
             content_data = [app.to_dict(include_details=False) for app in items]

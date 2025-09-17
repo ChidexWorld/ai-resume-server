@@ -581,7 +581,7 @@ async def get_job_recommendations(
         return [
             JobMatchResponse(
                 match_id=i+1,  # Generate temporary ID
-                job=rec["job"],
+                job=rec["job"].to_dict(),
                 match_score=rec["match_score"],
                 match_details=rec["match_details"],
                 created_at=datetime.now().isoformat()

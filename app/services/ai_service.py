@@ -390,22 +390,35 @@ class AIService:
         except Exception as e:
             raise Exception(f"Voice analysis failed: {str(e)}")
     
+    def _safe_pitch_mean(self, y) -> float:
+        """Safely calculate pitch mean handling NaN values."""
+        try:
+            pitch_values = librosa.yin(y, fmin=50, fmax=300, threshold=0.1)
+            # Filter out NaN values and calculate mean
+            valid_pitch = pitch_values[~np.isnan(pitch_values)]
+            if len(valid_pitch) > 0:
+                return float(np.mean(valid_pitch))
+            else:
+                return 150.0  # Default pitch value
+        except:
+            return 150.0  # Default pitch value on error
+
     def _extract_speech_features(self, file_path: str) -> Dict:
         """Extract technical speech features from audio."""
         try:
             # Load audio
             y, sr = librosa.load(file_path, sr=None)
-            
+
             # Extract features
             features = {
                 "duration": float(librosa.get_duration(y=y, sr=sr)),
                 "speaking_rate": len(y) / librosa.get_duration(y=y, sr=sr),
-                "pitch_mean": float(np.mean(librosa.yin(y, fmin=50, fmax=300, threshold=0.1))),
+                "pitch_mean": self._safe_pitch_mean(y),
                 "energy_mean": float(np.mean(librosa.feature.rms(y=y)[0])),
                 "spectral_centroid": float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)[0])),
                 "zero_crossing_rate": float(np.mean(librosa.feature.zero_crossing_rate(y)[0]))
             }
-            
+
             return features
         except Exception as e:
             return {"error": f"Failed to extract speech features: {str(e)}"}

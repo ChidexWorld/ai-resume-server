@@ -14,7 +14,7 @@ from app.routers.auth import get_current_active_user
 from app.services.ai_service import ai_service
 from app.schemas.matching import (
     JobMatchResponse, CandidateMatchResponse, MatchingRequest,
-    BatchMatchingResponse, MatchingStatsResponse
+    MatchingStatsResponse
 )
 from app.config import settings
 
@@ -22,7 +22,7 @@ from app.config import settings
 router = APIRouter()
 
 
-@router.post("/generate-matches/{job_id}", response_model=BatchMatchingResponse)
+@router.post("/generate-matches/{job_id}", response_model=List[CandidateMatchResponse])
 async def generate_job_matches(
     job_id: int,
     background_tasks: BackgroundTasks,
