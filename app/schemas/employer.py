@@ -23,7 +23,41 @@ class ResumeResponse(BaseModel):
     created_at: str
     updated_at: str
     analyzed_at: Optional[str]
-    
+
+    @classmethod
+    def from_orm(cls, resume):
+        """Convert Resume model to ResumeResponse schema."""
+        # Create analysis_results from individual fields
+        analysis_results = None
+        if resume.is_analyzed:
+            analysis_results = {
+                "contact_info": resume.contact_info,
+                "skills": resume.skills,
+                "experience": resume.experience,
+                "education": resume.education,
+                "certifications": resume.certifications,
+                "languages": resume.languages,
+                "professional_summary": resume.professional_summary,
+                "experience_level": resume.experience_level,
+                "total_experience_years": resume.total_experience_years,
+            }
+
+        return cls(
+            id=resume.id,
+            employee_id=resume.employee_id,
+            original_filename=resume.original_filename,
+            file_path=resume.file_path,
+            file_size=resume.file_size,
+            content_type=resume.mime_type,
+            is_analyzed=resume.is_analyzed,
+            analysis_status=resume.status.value,
+            extracted_text=resume.raw_text,
+            analysis_results=analysis_results,
+            created_at=resume.created_at.isoformat(),
+            updated_at=resume.updated_at.isoformat(),
+            analyzed_at=resume.analyzed_at.isoformat() if resume.analyzed_at else None
+        )
+
     class Config:
         from_attributes = True
 
@@ -43,7 +77,47 @@ class VoiceAnalysisResponse(BaseModel):
     created_at: str
     updated_at: str
     analyzed_at: Optional[str]
-    
+
+    @classmethod
+    def from_orm(cls, voice_analysis):
+        """Convert VoiceAnalysis model to VoiceAnalysisResponse schema."""
+        # Create analysis_results from individual fields
+        analysis_results = None
+        if voice_analysis.is_completed:
+            analysis_results = {
+                "speech_features": voice_analysis.speech_features,
+                "communication_analysis": voice_analysis.communication_analysis,
+                "language_analysis": voice_analysis.language_analysis,
+                "clarity_score": voice_analysis.clarity_score,
+                "confidence_score": voice_analysis.confidence_score,
+                "fluency_score": voice_analysis.fluency_score,
+                "vocabulary_score": voice_analysis.vocabulary_score,
+                "overall_communication_score": voice_analysis.overall_communication_score,
+                "strengths": voice_analysis.strengths,
+                "areas_for_improvement": voice_analysis.areas_for_improvement,
+                "speaking_pace": voice_analysis.speaking_pace,
+                "professional_language_usage": voice_analysis.professional_language_usage,
+                "emotional_tone": voice_analysis.emotional_tone,
+                "communication_summary": voice_analysis.get_communication_summary(),
+                "transcript_stats": voice_analysis.get_transcript_stats()
+            }
+
+        return cls(
+            id=voice_analysis.id,
+            employee_id=voice_analysis.employee_id,
+            original_filename=voice_analysis.original_filename,
+            file_path=voice_analysis.file_path,
+            file_size=voice_analysis.file_size,
+            content_type=voice_analysis.mime_type,
+            is_analyzed=voice_analysis.is_completed,
+            analysis_status=voice_analysis.status.value,
+            transcription=voice_analysis.transcript,
+            analysis_results=analysis_results,
+            created_at=voice_analysis.created_at.isoformat(),
+            updated_at=voice_analysis.updated_at.isoformat(),
+            analyzed_at=voice_analysis.analyzed_at.isoformat() if voice_analysis.analyzed_at else None
+        )
+
     class Config:
         from_attributes = True
 
