@@ -10,7 +10,7 @@ from sqlalchemy import desc, and_, or_
 from app.database import get_db
 from app.models import User, JobPosting, Application, Resume, VoiceAnalysis, UserType, JobStatus, ApplicationStatus
 from app.routers.auth import get_current_active_user
-from app.services.ai_service import ai_service
+from app.services import ai_service, AI_SERVICE_AVAILABLE
 from app.schemas.employer import (
     JobPostingCreate, JobPostingUpdate, JobPostingResponse,
     ApplicationReviewResponse, CandidateSearchResponse,
@@ -255,31 +255,63 @@ async def get_job_applications(
     
     if min_score is not None:
         query = query.filter(Application.match_score >= min_score)
-    
-    applications = query.order_by(desc(Application.match_score), desc(Application.applied_at)).offset(offset).limit(limit).all()
-    
+
+    # Enhanced sorting: AI match score (if available) + recency + original match score
+    applications = query.order_by(
+        desc(Application.match_score),  # Primary: AI-calculated match score
+        desc(Application.applied_at)    # Secondary: Most recent applications
+    ).offset(offset).limit(limit).all()
+
     # Prepare response with employee and analysis data
     response_data = []
     for app in applications:
         # Get employee data
         employee = db.query(User).filter(User.id == app.employee_id).first()
-        
+
         # Get resume data if available
         resume_data = None
         if app.resume_id:
             resume = db.query(Resume).filter(Resume.id == app.resume_id).first()
             if resume:
                 resume_data = resume.to_dict(include_analysis=True)
-        
+
         # Get voice analysis data if available
         voice_data = None
         if app.voice_analysis_id:
             voice = db.query(VoiceAnalysis).filter(VoiceAnalysis.id == app.voice_analysis_id).first()
             if voice:
                 voice_data = voice.to_dict(include_analysis=True)
-        
+
+        # Calculate AI-powered match score if AI service is available
+        ai_match_data = None
+        if AI_SERVICE_AVAILABLE and ai_service and resume_data:
+            try:
+                job_requirements = {
+                    "required_skills": job.required_skills or [],
+                    "preferred_skills": job.preferred_skills or [],
+                    "required_experience": {
+                        "min_years": job.required_experience or 0
+                    },
+                    "required_education": job.required_education or {},
+                    "industry": job.department,
+                    "matching_weights": job.matching_weights or {}
+                }
+                ai_match_data = ai_service.match_resume_to_job(resume_data, job_requirements)
+
+                # Update application match score if it's outdated
+                if app.match_score != ai_match_data.get("overall_score", app.match_score):
+                    app.match_score = ai_match_data.get("overall_score", app.match_score)
+                    db.commit()
+
+            except Exception as e:
+                print(f"AI matching failed for application {app.id}: {e}")
+
+        app_data = app.to_dict()
+        if ai_match_data:
+            app_data["ai_match_analysis"] = ai_match_data
+
         response_data.append(ApplicationReviewResponse(
-            application=app.to_dict(),
+            application=app_data,
             employee=employee.to_dict() if employee else None,
             resume_analysis=resume_data,
             voice_analysis=voice_data
@@ -318,19 +350,43 @@ async def update_application_status(
         employee = db.query(User).filter(User.id == application.employee_id).first()
         resume_data = None
         voice_data = None
-        
+
         if application.resume_id:
             resume = db.query(Resume).filter(Resume.id == application.resume_id).first()
             if resume:
                 resume_data = resume.to_dict(include_analysis=True)
-        
+
         if application.voice_analysis_id:
             voice = db.query(VoiceAnalysis).filter(VoiceAnalysis.id == application.voice_analysis_id).first()
             if voice:
                 voice_data = voice.to_dict(include_analysis=True)
-        
+
+        # Generate AI analysis for the application
+        ai_match_data = None
+        if AI_SERVICE_AVAILABLE and ai_service and resume_data:
+            try:
+                job = db.query(JobPosting).filter(JobPosting.id == application.job_posting_id).first()
+                if job:
+                    job_requirements = {
+                        "required_skills": job.required_skills or [],
+                        "preferred_skills": job.preferred_skills or [],
+                        "required_experience": {
+                            "min_years": job.required_experience or 0
+                        },
+                        "required_education": job.required_education or {},
+                        "industry": job.department,
+                        "matching_weights": job.matching_weights or {}
+                    }
+                    ai_match_data = ai_service.match_resume_to_job(resume_data, job_requirements)
+            except Exception as e:
+                print(f"AI analysis failed for application {application.id}: {e}")
+
+        app_data = application.to_dict()
+        if ai_match_data:
+            app_data["ai_match_analysis"] = ai_match_data
+
         return ApplicationReviewResponse(
-            application=application.to_dict(),
+            application=app_data,
             employee=employee.to_dict() if employee else None,
             resume_analysis=resume_data,
             voice_analysis=voice_data
@@ -430,14 +486,37 @@ async def search_candidates(
                 if not voice_analysis.overall_communication_score or voice_analysis.overall_communication_score < min_communication_score:
                     continue
             
-            # Apply skills filter
+            # Apply skills filter with AI-powered semantic matching
+            matching_skills = []
             if skills:
                 required_skills = [s.strip().lower() for s in skills.split(',')]
                 resume_skills = resume.get_skills_list()
                 resume_skills_lower = [s.lower() for s in resume_skills]
-                
-                # Check if candidate has at least some of the required skills
+
+                # Basic keyword matching
                 matching_skills = [s for s in required_skills if s in resume_skills_lower]
+
+                # Enhanced AI semantic matching if available
+                if AI_SERVICE_AVAILABLE and ai_service and not matching_skills:
+                    try:
+                        # Create a simple job requirements object for AI matching
+                        job_requirements = {
+                            "required_skills": [s.strip() for s in skills.split(',')],
+                            "preferred_skills": [],
+                            "required_experience": {"min_years": min_experience_years or 0},
+                            "industry": "general"
+                        }
+                        resume_data = resume.to_dict(include_analysis=True)
+                        ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
+
+                        # Use AI match score to determine relevance
+                        if ai_match.get("overall_score", 0) >= 60:  # 60% threshold
+                            matching_skills = ai_match.get("match_details", {}).get("matching_skills", [])
+
+                    except Exception as e:
+                        print(f"AI semantic matching failed for resume {resume.id}: {e}")
+
+                # Skip if no skills match found
                 if not matching_skills:
                     continue
             
@@ -447,6 +526,24 @@ async def search_candidates(
                 if location.lower() not in candidate_location:
                     continue
             
+            # Calculate AI match score for search results
+            ai_match_score = None
+            ai_match_details = None
+            if AI_SERVICE_AVAILABLE and ai_service and skills:
+                try:
+                    job_requirements = {
+                        "required_skills": [s.strip() for s in skills.split(',')],
+                        "preferred_skills": [],
+                        "required_experience": {"min_years": min_experience_years or 0},
+                        "industry": "general"
+                    }
+                    resume_data = resume.to_dict(include_analysis=True)
+                    ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
+                    ai_match_score = ai_match.get("overall_score")
+                    ai_match_details = ai_match.get("match_details")
+                except Exception as e:
+                    print(f"AI match scoring failed for resume {resume.id}: {e}")
+
             candidates.append(CandidateSearchResponse(
                 employee=employee.to_dict(),
                 resume_analysis=resume.to_dict(include_analysis=True),
@@ -454,19 +551,199 @@ async def search_candidates(
                 match_summary={
                     "skills_match": matching_skills if skills else [],
                     "experience_years": resume.total_experience_years,
-                    "communication_score": voice_analysis.overall_communication_score if voice_analysis else None
+                    "communication_score": voice_analysis.overall_communication_score if voice_analysis else None,
+                    "ai_match_score": ai_match_score,
+                    "ai_match_details": ai_match_details
                 }
             ))
             
             if len(candidates) >= limit:
                 break
-        
+
+        # Sort candidates by AI match score if available, otherwise by experience
+        if AI_SERVICE_AVAILABLE and any(c.match_summary.get("ai_match_score") for c in candidates):
+            candidates.sort(key=lambda x: x.match_summary.get("ai_match_score", 0), reverse=True)
+        else:
+            candidates.sort(key=lambda x: x.match_summary.get("experience_years", 0), reverse=True)
+
         return candidates
         
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Candidate search failed: {str(e)}"
+        )
+
+
+@router.post("/jobs/{job_id}/auto-score-applications")
+async def auto_score_applications(
+    job_id: int,
+    current_user: User = Depends(verify_employer_user),
+    db: Session = Depends(get_db)
+):
+    """Automatically score all applications for a job using AI matching."""
+    try:
+        # Verify job belongs to employer
+        job = db.query(JobPosting).filter(
+            JobPosting.id == job_id,
+            JobPosting.employer_id == current_user.id
+        ).first()
+
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Job posting not found"
+            )
+
+        if not AI_SERVICE_AVAILABLE or not ai_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI service not available"
+            )
+
+        # Get all applications for this job
+        applications = db.query(Application).filter(
+            Application.job_posting_id == job_id
+        ).all()
+
+        updated_count = 0
+        job_requirements = {
+            "required_skills": job.required_skills or [],
+            "preferred_skills": job.preferred_skills or [],
+            "required_experience": {
+                "min_years": job.required_experience or 0
+            },
+            "required_education": job.required_education or {},
+            "industry": job.department,
+            "matching_weights": job.matching_weights or {}
+        }
+
+        for app in applications:
+            try:
+                if app.resume_id:
+                    resume = db.query(Resume).filter(Resume.id == app.resume_id).first()
+                    if resume:
+                        resume_data = resume.to_dict(include_analysis=True)
+                        ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
+
+                        # Update match score
+                        new_score = ai_match.get("overall_score", app.match_score)
+                        if app.match_score != new_score:
+                            app.match_score = new_score
+                            updated_count += 1
+
+            except Exception as e:
+                print(f"Failed to score application {app.id}: {e}")
+                continue
+
+        db.commit()
+
+        return {
+            "message": f"Successfully updated {updated_count} application scores",
+            "total_applications": len(applications),
+            "updated_applications": updated_count
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to auto-score applications: {str(e)}"
+        )
+
+
+@router.get("/jobs/{job_id}/ai-recommendations", response_model=List[CandidateSearchResponse])
+async def get_ai_candidate_recommendations(
+    job_id: int,
+    limit: int = Query(10, le=50, description="Maximum number of candidates to recommend"),
+    current_user: User = Depends(verify_employer_user),
+    db: Session = Depends(get_db)
+):
+    """Get AI-powered candidate recommendations for a specific job."""
+    try:
+        # Verify job belongs to employer
+        job = db.query(JobPosting).filter(
+            JobPosting.id == job_id,
+            JobPosting.employer_id == current_user.id
+        ).first()
+
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Job posting not found"
+            )
+
+        if not AI_SERVICE_AVAILABLE or not ai_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI service not available"
+            )
+
+        # Get job requirements
+        job_requirements = {
+            "required_skills": job.required_skills or [],
+            "preferred_skills": job.preferred_skills or [],
+            "required_experience": {
+                "min_years": job.required_experience or 0
+            },
+            "required_education": job.required_education or {},
+            "industry": job.department,
+            "matching_weights": job.matching_weights or {}
+        }
+
+        # Get all active employees with analyzed resumes
+        resumes = db.query(Resume).join(User).filter(
+            User.user_type == UserType.EMPLOYEE,
+            User.is_active == True,
+            Resume.status == "analyzed",
+            Resume.is_active == True
+        ).limit(limit * 3).all()  # Get more for better filtering
+
+        candidates = []
+        for resume in resumes:
+            try:
+                resume_data = resume.to_dict(include_analysis=True)
+                ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
+
+                # Only include high-scoring candidates
+                if ai_match.get("overall_score", 0) >= 70:  # 70% threshold for recommendations
+                    employee = resume.employee
+
+                    # Get voice analysis if available
+                    voice_analysis = db.query(VoiceAnalysis).filter(
+                        VoiceAnalysis.employee_id == employee.id,
+                        VoiceAnalysis.status == "completed",
+                        VoiceAnalysis.is_active == True
+                    ).order_by(desc(VoiceAnalysis.created_at)).first()
+
+                    candidates.append(CandidateSearchResponse(
+                        employee=employee.to_dict(),
+                        resume_analysis=resume_data,
+                        voice_analysis=voice_analysis.to_dict(include_analysis=True) if voice_analysis else None,
+                        match_summary={
+                            "ai_match_score": ai_match.get("overall_score"),
+                            "matching_skills": ai_match.get("match_details", {}).get("matching_skills", []),
+                            "experience_years": resume.total_experience_years,
+                            "communication_score": voice_analysis.overall_communication_score if voice_analysis else None,
+                            "strengths": ai_match.get("match_details", {}).get("strengths", []),
+                            "concerns": ai_match.get("match_details", {}).get("concerns", []),
+                            "recommendations": ai_match.get("match_details", {}).get("recommendations", [])
+                        }
+                    ))
+
+            except Exception as e:
+                print(f"AI recommendation failed for resume {resume.id}: {e}")
+                continue
+
+        # Sort by AI match score
+        candidates.sort(key=lambda x: x.match_summary.get("ai_match_score", 0), reverse=True)
+
+        return candidates[:limit]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get AI recommendations: {str(e)}"
         )
 
 

@@ -83,9 +83,16 @@ os.makedirs(os.path.join(settings.upload_folder, "voice"), exist_ok=True)
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(employee.router, prefix="/api/employee", tags=["Employee"])
 app.include_router(employer.router, prefix="/api/employer", tags=["Employer"])
-# Temporarily disabled matching router due to syntax issues - needs manual fix
-# app.include_router(matching.router, prefix="/api/matching", tags=["AI Matching"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Administration"])
+
+# Import and include matching router
+try:
+    from app.routers import matching
+    app.include_router(matching.router, prefix="/api/matching", tags=["AI Matching"])
+    print("✓ AI Matching router enabled")
+except Exception as e:
+    print(f"⚠️ AI Matching router could not be loaded: {e}")
+    print("Basic matching functionality may be limited")
 
 
 @app.on_event("startup")
@@ -93,14 +100,30 @@ async def startup_event():
     """Initialize application on startup."""
     print(f"Starting {settings.app_name} v{settings.app_version}")
     print(f"Debug mode: {settings.debug}")
-    
+
     # Create database tables
     create_tables()
     print("Database tables created/verified")
-    
+
     # Create upload directories
     os.makedirs(settings.upload_folder, exist_ok=True)
     print(f"Upload directory ready: {settings.upload_folder}")
+
+    # Initialize AI services
+    try:
+        from app.services import initialize_services
+        print("Initializing AI services...")
+        service_status = initialize_services()
+
+        if service_status["errors"]:
+            for error in service_status["errors"]:
+                print(f"Warning: {error}")
+
+        print("AI services initialization completed")
+
+    except Exception as e:
+        print(f"Warning: Failed to initialize AI services: {e}")
+        print("The application will continue but AI features may not work properly")
 
 
 @app.get("/")
@@ -131,12 +154,21 @@ async def health_check(db: Session = Depends(get_db)):
         db_status = "connected"
     except Exception as e:
         db_status = f"error: {str(e)}"
-    
+
+    # Check AI services status
+    ai_status = "unknown"
+    try:
+        from app.services import get_service_status
+        service_status = get_service_status()
+        ai_status = service_status
+    except Exception as e:
+        ai_status = f"error: {str(e)}"
+
     return {
         "status": "healthy",
         "database": db_status,
         "version": settings.app_version,
-        "ai_models": "loaded"
+        "ai_services": ai_status
     }
 
 

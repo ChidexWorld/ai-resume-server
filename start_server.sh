@@ -31,6 +31,6 @@ if [ -d "venv" ]; then
     echo "✅ Virtual environment activated"
 fi
 
-# Start the server
-echo "🔥 Starting uvicorn server..."
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# Start the server with enhanced services initialization
+echo "🔥 Starting server with AI services..."
+python3 run_with_services.py

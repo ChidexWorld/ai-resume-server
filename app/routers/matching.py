@@ -11,7 +11,7 @@ from datetime import datetime
 from app.database import get_db
 from app.models import User, JobPosting, Resume, VoiceAnalysis, JobMatch, UserType, JobStatus
 from app.routers.auth import get_current_active_user
-from app.services.ai_service import ai_service
+from app.services import ai_service, AI_SERVICE_AVAILABLE
 from app.schemas.matching import (
     JobMatchResponse, CandidateMatchResponse, MatchingRequest,
     MatchingStatsResponse

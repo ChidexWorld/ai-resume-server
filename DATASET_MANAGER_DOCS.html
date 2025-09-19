@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataset Manager - Complete Documentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+        }
+
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; }
+        h3 { color: #2980b9; margin-top: 25px; }
+        h4 { color: #27ae60; margin-top: 20px; }
+
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #333;
+        }
+
+        .info-box {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .success-box {
+            background-color: #f0fff4;
+            border-left-color: #27ae60;
+        }
+
+        .warning-box {
+            background-color: #fffbf0;
+            border-left-color: #f39c12;
+        }
+
+        .error-box {
+            background-color: #fff5f5;
+            border-left-color: #e74c3c;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .feature-card h4 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .file-tree {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-line;
+            font-size: 0.9em;
+        }
+
+        .method-signature {
+            background-color: #e8f4fd;
+            border: 1px solid #bee5eb;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+
+        .emoji { font-size: 1.2em; }
+
+        ul, ol { margin: 10px 0; }
+        li { margin: 5px 0; }
+
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .toc li {
+            margin: 5px 0;
+        }
+
+        .toc a {
+            color: #2980b9;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        @media print {
+            body { margin: 0; padding: 15px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <h1><span class="emoji">🗂️</span> Dataset Manager - Complete Documentation</h1>
+
+    <div class="toc">
+        <h3>Table of Contents</h3>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#file-structure">File Structure</a></li>
+            <li><a href="#dataset-schemas">Dataset Schemas</a></li>
+            <li><a href="#api-reference">API Reference</a></li>
+            <li><a href="#default-content">Default Dataset Content</a></li>
+            <li><a href="#usage-examples">Usage Examples</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+        </ul>
+    </div>
+
+    <h2 id="overview"><span class="emoji">📋</span> Overview</h2>
+
+    <p>The Dataset Manager is a lightweight, standalone service responsible for managing manual datasets for skills, job titles, industries, certifications, and education keywords. It operates independently of heavy AI dependencies and provides the foundation for industry-specific analysis.</p>
+
+    <h2 id="architecture"><span class="emoji">🏗️</span> Architecture</h2>
+
+    <h3>Core Components</h3>
+
+    <div class="file-tree">DatasetManager
+├── Dataset Loading & Creation
+├── Industry Detection
+├── Skills Management
+├── Job Titles Management
+├── Certifications Management
+├── Education Keywords Management
+└── Export/Import Functionality</div>
+
+    <h3>Key Features</h3>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h4><span class="emoji">⚡</span> Zero Dependencies</h4>
+            <p>Uses only Python standard library for maximum compatibility and minimal overhead.</p>
+        </div>
+        <div class="feature-card">
+            <h4><span class="emoji">🔄</span> Automatic Fallback</h4>
+            <p>Creates default datasets if files are missing, ensuring the service always works.</p>
+        </div>
+        <div class="feature-card">
+            <h4><span class="emoji">🏭</span> Industry-Specific</h4>
+            <p>Organizes data by industry categories for targeted analysis and matching.</p>
+        </div>
+        <div class="feature-card">
+            <h4><span class="emoji">🔧</span> Extensible</h4>
+            <p>Easy to add new industries, skills, and categories through simple API calls.</p>
+        </div>
+        <div class="feature-card">
+            <h4><span class="emoji">💾</span> Persistent</h4>
+            <p>Saves changes automatically to JSON files for data persistence.</p>
+        </div>
+        <div class="feature-card">
+            <h4><span class="emoji">📦</span> Import/Export</h4>
+            <p>Full dataset backup and migration support for easy deployment.</p>
+        </div>
+    </div>
+
+    <h2 id="file-structure"><span class="emoji">📁</span> File Structure</h2>
+
+    <div class="file-tree">datasets/
+├── skills.json              # Skills organized by industry and category
+├── job_titles.json          # Job titles grouped by industry
+├── industries.json          # Industry keywords for detection
+├── certifications.json      # Professional certifications by field
+└── education_keywords.json  # Education-related terms and degrees</div>
+
+    <h2 id="dataset-schemas"><span class="emoji">📊</span> Dataset Schemas</h2>
+
+    <h3>Skills Dataset (<code>skills.json</code>)</h3>
+
+    <pre><code>{
+  "industry_name": {
+    "category_name": [
+      "skill1",
+      "skill2",
+      "skill3"
+    ]
+  }
+}</code></pre>
+
+    <div class="info-box">
+        <h4>Example:</h4>
+        <pre><code>{
+  "technology": {
+    "programming": ["python", "javascript", "java"],
+    "databases": ["mysql", "postgresql", "mongodb"],
+    "cloud": ["aws", "azure", "gcp"]
+  },
+  "marketing": {
+    "digital_marketing": ["seo", "sem", "google ads"],
+    "analytics": ["google analytics", "tableau", "power bi"]
+  }
+}</code></pre>
+    </div>
+
+    <h3>Job Titles Dataset (<code>job_titles.json</code>)</h3>
+
+    <pre><code>{
+  "industry_name": [
+    "job_title1",
+    "job_title2",
+    "job_title3"
+  ]
+}</code></pre>
+
+    <h3>Industries Dataset (<code>industries.json</code>)</h3>
+
+    <pre><code>{
+  "industry_name": [
+    "keyword1",
+    "keyword2",
+    "keyword3"
+  ]
+}</code></pre>
+
+    <h2 id="api-reference"><span class="emoji">⚙️</span> API Reference</h2>
+
+    <h3>Initialization</h3>
+
+    <pre><code>from app.services.dataset_manager import DatasetManager, dataset_manager
+
+# Use global instance
+dm = dataset_manager
+
+# Or create new instance with custom path
+dm = DatasetManager(dataset_path="custom/path/")</code></pre>
+
+    <h3>Core Methods</h3>
+
+    <h4><code>get_dataset_stats() → Dict</code></h4>
+    <div class="method-signature">
+        Returns comprehensive statistics about all datasets.
+    </div>
+
+    <pre><code>stats = dm.get_dataset_stats()
+# Returns:
+{
+  "skills": {
+    "total_industries": 9,
+    "total_skills": 148,
+    "industries": ["technology", "marketing", ...]
+  },
+  "job_titles": {
+    "total_industries": 8,
+    "total_titles": 95,
+    "industries": ["technology", "finance", ...]
+  },
+  "certifications": {
+    "total_industries": 6,
+    "total_certifications": 43,
+    "industries": ["technology", "finance", ...]
+  }
+}</code></pre>
+
+    <h4><code>get_all_skills() → List[str]</code></h4>
+    <div class="method-signature">
+        Returns a flat list of all skills across all industries.
+    </div>
+
+    <pre><code>all_skills = dm.get_all_skills()
+# Returns: ["python", "javascript", "seo", "financial modeling", ...]</code></pre>
+
+    <h4><code>detect_industry(text: str) → str</code></h4>
+    <div class="method-signature">
+        Analyzes text content to detect the most likely industry.
+    </div>
+
+    <pre><code>industry = dm.detect_industry("Python developer with AWS experience")
+# Returns: "technology"
+
+industry = dm.detect_industry("Financial analyst with CFA certification")
+# Returns: "finance"</code></pre>
+
+    <h3>Data Management Methods</h3>
+
+    <h4><code>add_skills_to_dataset(industry: str, category: str, skills: List[str])</code></h4>
+
+    <pre><code>dm.add_skills_to_dataset(
+    industry="retail",
+    category="customer_service",
+    skills=["customer support", "pos systems", "inventory management"]
+)</code></pre>
+
+    <h4><code>add_job_titles_to_dataset(industry: str, titles: List[str])</code></h4>
+
+    <pre><code>dm.add_job_titles_to_dataset(
+    industry="retail",
+    titles=["store manager", "sales associate", "cashier"]
+)</code></pre>
+
+    <h2 id="default-content"><span class="emoji">🏭</span> Default Dataset Content</h2>
+
+    <h3>Technology Industry</h3>
+    <div class="info-box">
+        <ul>
+            <li><strong>Programming:</strong> python, javascript, java, c++, c#, php, ruby, go, rust, r, sql</li>
+            <li><strong>Web Development:</strong> html, css, react, angular, vue, node.js, bootstrap</li>
+            <li><strong>Databases:</strong> mysql, postgresql, mongodb, redis, oracle, sqlite</li>
+            <li><strong>Cloud:</strong> aws, azure, gcp, docker, kubernetes, jenkins</li>
+            <li><strong>Tools:</strong> git, jira, confluence, slack</li>
+        </ul>
+    </div>
+
+    <h3>Marketing Industry</h3>
+    <div class="info-box">
+        <ul>
+            <li><strong>Digital Marketing:</strong> seo, sem, google ads, facebook ads, content marketing, email marketing</li>
+            <li><strong>Analytics:</strong> google analytics, adobe analytics, tableau, power bi, excel</li>
+            <li><strong>Social Media:</strong> social media management, hootsuite, buffer, sprout social</li>
+            <li><strong>Content:</strong> copywriting, content creation, blogging, video editing, graphic design</li>
+        </ul>
+    </div>
+
+    <h3>Finance Industry</h3>
+    <div class="info-box">
+        <ul>
+            <li><strong>Accounting:</strong> quickbooks, sap, oracle financials, gaap, ifrs, financial modeling</li>
+            <li><strong>Analysis:</strong> financial analysis, risk management, investment analysis, budgeting, forecasting</li>
+            <li><strong>Tools:</strong> excel, bloomberg terminal, matlab, r, python, sql</li>
+        </ul>
+    </div>
+
+    <h2 id="usage-examples"><span class="emoji">💻</span> Usage Examples</h2>
+
+    <h3>Basic Usage</h3>
+
+    <pre><code>from app.services.dataset_manager import dataset_manager as dm
+
+# Get overview
+stats = dm.get_dataset_stats()
+print(f"Total skills: {stats['skills']['total_skills']}")
+
+# Find industry for resume text
+resume_text = "Experienced software engineer with Python, AWS, and Docker expertise"
+industry = dm.detect_industry(resume_text)
+print(f"Detected industry: {industry}")  # Output: "technology"
+
+# Get relevant skills for matching
+tech_skills = dm.get_skills_by_industry("technology")
+relevant_skills = [skill for skill in tech_skills if skill in resume_text.lower()]</code></pre>
+
+    <h3>Adding Custom Industry</h3>
+
+    <pre><code># Add a new industry: "cybersecurity"
+dm.add_skills_to_dataset(
+    industry="cybersecurity",
+    category="security_tools",
+    skills=["wireshark", "metasploit", "nessus", "burp suite", "nmap"]
+)
+
+dm.add_job_titles_to_dataset(
+    industry="cybersecurity",
+    titles=["security analyst", "penetration tester", "security architect", "ciso"]
+)</code></pre>
+
+    <h3>Data Migration</h3>
+
+    <pre><code># Export current datasets
+backup_path = dm.export_datasets("backup_2024/")
+print(backup_path)  # "Datasets exported to backup_2024/"
+
+# Import from different environment
+result = dm.import_datasets("production_datasets/")
+print(result)  # "Successfully imported 5 datasets"</code></pre>
+
+    <h2 id="troubleshooting"><span class="emoji">🔍</span> Troubleshooting</h2>
+
+    <h3>Common Issues</h3>
+
+    <div class="warning-box">
+        <h4>"Dataset files not found"</h4>
+        <ul>
+            <li><strong>Symptoms:</strong> Warning messages during initialization</li>
+            <li><strong>Solution:</strong> Automatic - default datasets are created</li>
+            <li><strong>Prevention:</strong> Regular backups using <code>export_datasets()</code></li>
+        </ul>
+    </div>
+
+    <div class="error-box">
+        <h4>"Failed to save dataset"</h4>
+        <ul>
+            <li><strong>Symptoms:</strong> Changes not persisting</li>
+            <li><strong>Causes:</strong> File permissions, disk space, invalid path</li>
+            <li><strong>Solution:</strong> Check file permissions and available disk space</li>
+        </ul>
+    </div>
+
+    <div class="info-box">
+        <h4>"Industry not detected"</h4>
+        <ul>
+            <li><strong>Symptoms:</strong> <code>detect_industry()</code> returns "general"</li>
+            <li><strong>Causes:</strong> Text doesn't match known keywords/skills</li>
+            <li><strong>Solution:</strong> Add relevant keywords to industry datasets</li>
+        </ul>
+    </div>
+
+    <h3>Debug Commands</h3>
+
+    <pre><code># Check dataset integrity
+stats = dm.get_dataset_stats()
+print(f"Skills loaded: {stats['skills']['total_skills']}")
+print(f"Industries: {stats['skills']['industries']}")
+
+# Test industry detection
+test_texts = [
+    "Python developer with AWS experience",
+    "Financial analyst with Excel skills",
+    "Nurse with patient care experience"
+]
+for text in test_texts:
+    industry = dm.detect_industry(text)
+    print(f"'{text}' -> {industry}")
+
+# Validate dataset files
+import os
+dataset_files = ["skills.json", "job_titles.json", "industries.json",
+                "certifications.json", "education_keywords.json"]
+for file in dataset_files:
+    path = os.path.join(dm.dataset_path, file)
+    exists = os.path.exists(path)
+    print(f"{file}: {'✓' if exists else '✗'}")</code></pre>
+
+    <div class="success-box">
+        <h3><span class="emoji">🎯</span> Summary</h3>
+        <p>The Dataset Manager provides a robust, lightweight foundation for industry-specific analysis with zero dependencies, automatic fallbacks, and comprehensive extensibility. It efficiently manages skills, job titles, and industry data while maintaining data integrity and providing easy-to-use APIs for integration with AI services.</p>
+    </div>
+
+    <div class="no-print" style="margin-top: 40px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;">
+        <h3><span class="emoji">💡</span> Convert to PDF</h3>
+        <p>To convert this documentation to PDF:</p>
+        <ol>
+            <li>Open this HTML file in your web browser</li>
+            <li>Press <kbd>Ctrl+P</kbd> (or <kbd>Cmd+P</kbd> on Mac)</li>
+            <li>Select "Save as PDF" as the destination</li>
+            <li>Adjust print settings if needed</li>
+            <li>Click "Save"</li>
+        </ol>
+    </div>
+</body>
+</html>

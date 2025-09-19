@@ -11,7 +11,7 @@ from sqlalchemy import desc
 from app.database import get_db
 from app.models import User, Resume, VoiceAnalysis, Application, JobPosting, UserType
 from app.routers.auth import get_current_active_user
-from app.services.ai_service import ai_service
+from app.services import ai_service, AI_SERVICE_AVAILABLE
 from app.services.file_service import FileService
 from app.schemas.employer import (
     ResumeResponse, VoiceAnalysisResponse, ApplicationCreate, ApplicationResponse
@@ -115,24 +115,37 @@ async def upload_resume(
         try:
             resume.update_status("processing")
             db.commit()
-            
+
+            # Check if AI service is available
+            if not AI_SERVICE_AVAILABLE:
+                resume.status = "failed"
+                resume.analysis_error = "AI service not available - missing dependencies"
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI service not available. Please ensure all AI dependencies are installed."
+                )
+
             # Extract text from file
             extracted_text = ai_service.extract_text_from_file(
-                file_info["file_path"], 
+                file_info["file_path"],
                 resume.mime_type
             )
             resume.raw_text = extracted_text
-            
+
             # Analyze resume with AI
             analysis_results = ai_service.analyze_resume(extracted_text)
             resume.set_analysis_results(analysis_results)
-            
+
             db.commit()
             db.refresh(resume)
-            
+
+        except HTTPException:
+            raise
         except Exception as e:
             # Mark analysis as failed but keep the resume record
             resume.status = "failed"
+            resume.analysis_error = str(e)
             db.commit()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -226,22 +239,35 @@ async def upload_voice_recording(
         try:
             voice_analysis.update_status("transcribing")
             db.commit()
-            
+
+            # Check if AI service is available
+            if not AI_SERVICE_AVAILABLE:
+                voice_analysis.status = "failed"
+                voice_analysis.analysis_error = "AI service not available - missing dependencies"
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI service not available. Please ensure all AI dependencies are installed."
+                )
+
             # Transcribe audio
             transcript, confidence = ai_service.transcribe_audio(file_info["file_path"])
             voice_analysis.set_transcript(transcript, confidence)
             db.commit()
-            
+
             # Analyze voice
             analysis_results = ai_service.analyze_voice(file_info["file_path"], transcript)
             voice_analysis.set_analysis_results(analysis_results)
-            
+
             db.commit()
             db.refresh(voice_analysis)
-            
+
+        except HTTPException:
+            raise
         except Exception as e:
             # Mark analysis as failed
             voice_analysis.status = "failed"
+            voice_analysis.analysis_error = str(e)
             db.commit()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -458,23 +484,25 @@ async def apply_to_job(
         
         db.add(application)
         
-        # Calculate match score if resume is provided
-        if resume:
+        # Calculate match score if resume is provided and AI service is available
+        if resume and AI_SERVICE_AVAILABLE:
             try:
                 job_requirements = job.get_matching_criteria()
                 resume_data = resume.to_dict(include_analysis=True)
-                
+
                 match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
-                
+
                 application.set_match_results(
                     match_score=match_result["overall_score"],
                     match_details=match_result["match_details"],
                     recommendation=f"Match score: {match_result['overall_score']}%"
                 )
-                
+
             except Exception as e:
                 print(f"Match calculation failed: {e}")
                 # Continue without match score
+        elif resume and not AI_SERVICE_AVAILABLE:
+            print("AI service not available - skipping match calculation")
         
         # Update job application count
         job.increment_applications()
@@ -532,51 +560,66 @@ async def get_application(
 async def get_job_recommendations(
     limit: int = 20,
     min_score: int = 70,
+    industry_filter: Optional[str] = None,
     current_user: User = Depends(verify_employee_user),
     db: Session = Depends(get_db)
 ):
     """Get AI-powered job recommendations for the employee."""
     try:
+        # Check if AI service is available
+        if not AI_SERVICE_AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI service not available. Job recommendations require AI analysis."
+            )
+
         # Get employee's latest resume
         latest_resume = db.query(Resume).filter(
             Resume.employee_id == current_user.id,
             Resume.status == "analyzed",
             Resume.is_active == True
         ).order_by(desc(Resume.created_at)).first()
-        
+
         if not latest_resume:
-            return []
-        
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No analyzed resume found. Please upload and analyze a resume first."
+            )
+
         # Get active job postings
-        jobs = db.query(JobPosting).filter(
-            JobPosting.status == "active"
-        ).limit(100).all()  # Limit for performance
-        
+        query = db.query(JobPosting).filter(JobPosting.status == "active")
+
+        # Apply industry filter if provided
+        if industry_filter:
+            query = query.filter(JobPosting.department.ilike(f"%{industry_filter}%"))
+
+        jobs = query.limit(100).all()  # Limit for performance
+
         recommendations = []
-        
+
         for job in jobs:
             try:
                 # Calculate match score
                 job_requirements = job.get_matching_criteria()
                 resume_data = latest_resume.to_dict(include_analysis=True)
-                
+
                 match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
                 match_score = match_result["overall_score"]
-                
+
                 if match_score >= min_score:
                     recommendations.append({
                         "job": job,
                         "match_score": match_score,
                         "match_details": match_result["match_details"]
                     })
-                    
+
             except Exception as e:
                 print(f"Match calculation failed for job {job.id}: {e}")
                 continue
-        
+
         # Sort by match score
         recommendations.sort(key=lambda x: x["match_score"], reverse=True)
-        
+
         # Return top recommendations
         return [
             JobMatchResponse(
@@ -588,9 +631,177 @@ async def get_job_recommendations(
             )
             for i, rec in enumerate(recommendations[:limit])
         ]
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get recommendations: {str(e)}"
+        )
+
+
+@router.post("/analyze-job-match/{job_id}")
+async def analyze_job_match(
+    job_id: int,
+    resume_id: Optional[int] = None,
+    current_user: User = Depends(verify_employee_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed match analysis between user's resume and a specific job."""
+    try:
+        # Check if AI service is available
+        if not AI_SERVICE_AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI service not available. Match analysis requires AI service."
+            )
+
+        # Get job posting
+        job = db.query(JobPosting).filter(
+            JobPosting.id == job_id,
+            JobPosting.status == "active"
+        ).first()
+
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Job posting not found or not active"
+            )
+
+        # Get resume (use provided ID or latest)
+        if resume_id:
+            resume = db.query(Resume).filter(
+                Resume.id == resume_id,
+                Resume.employee_id == current_user.id,
+                Resume.status == "analyzed",
+                Resume.is_active == True
+            ).first()
+        else:
+            resume = db.query(Resume).filter(
+                Resume.employee_id == current_user.id,
+                Resume.status == "analyzed",
+                Resume.is_active == True
+            ).order_by(desc(Resume.created_at)).first()
+
+        if not resume:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No analyzed resume found. Please upload and analyze a resume first."
+            )
+
+        # Calculate detailed match
+        job_requirements = job.get_matching_criteria()
+        resume_data = resume.to_dict(include_analysis=True)
+
+        match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
+
+        return {
+            "job": job.to_dict(),
+            "resume": {
+                "id": resume.id,
+                "filename": resume.original_filename,
+                "detected_industry": resume_data.get("detected_industry"),
+                "experience_level": resume_data.get("experience_level"),
+                "total_experience_years": resume_data.get("total_experience_years")
+            },
+            "match_analysis": {
+                "overall_score": match_result["overall_score"],
+                "match_details": match_result["match_details"],
+                "strengths": match_result["match_details"].get("matching_skills", []),
+                "gaps": match_result["match_details"].get("missing_skills", []),
+                "recommendations": match_result["match_details"].get("recommendations", [])
+            },
+            "analysis_date": datetime.now().isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Match analysis failed: {str(e)}"
+        )
+
+
+@router.get("/skills-analysis")
+async def get_skills_analysis(
+    current_user: User = Depends(verify_employee_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive skills analysis from user's latest resume."""
+    try:
+        # Check if AI service is available
+        if not AI_SERVICE_AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI service not available. Skills analysis requires AI service."
+            )
+
+        # Get latest analyzed resume
+        latest_resume = db.query(Resume).filter(
+            Resume.employee_id == current_user.id,
+            Resume.status == "analyzed",
+            Resume.is_active == True
+        ).order_by(desc(Resume.created_at)).first()
+
+        if not latest_resume:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No analyzed resume found. Please upload and analyze a resume first."
+            )
+
+        resume_data = latest_resume.to_dict(include_analysis=True)
+
+        # Get industry-specific insights from dataset manager
+        from app.services import dataset_manager
+        detected_industry = resume_data.get("detected_industry", "general")
+        industry_skills = dataset_manager.get_skills_by_industry(detected_industry)
+        all_skills = dataset_manager.get_all_skills()
+
+        # Analyze skill coverage
+        resume_skills = []
+        if "skills" in resume_data:
+            for category, skills in resume_data["skills"].items():
+                resume_skills.extend(skills)
+
+        resume_skills_lower = [skill.lower() for skill in resume_skills]
+        industry_skills_lower = [skill.lower() for skill in industry_skills]
+
+        matching_industry_skills = [
+            skill for skill in industry_skills
+            if skill.lower() in resume_skills_lower
+        ]
+
+        missing_industry_skills = [
+            skill for skill in industry_skills
+            if skill.lower() not in resume_skills_lower
+        ][:10]  # Top 10 missing skills
+
+        return {
+            "detected_industry": detected_industry,
+            "total_skills_found": len(resume_skills),
+            "industry_skill_coverage": {
+                "matching_skills": matching_industry_skills,
+                "missing_skills": missing_industry_skills,
+                "coverage_percentage": round(
+                    (len(matching_industry_skills) / max(len(industry_skills), 1)) * 100, 1
+                )
+            },
+            "skills_by_category": resume_data.get("skills", {}),
+            "experience_level": resume_data.get("experience_level"),
+            "total_experience_years": resume_data.get("total_experience_years"),
+            "recommendations": {
+                "skills_to_develop": missing_industry_skills[:5],
+                "career_level": resume_data.get("experience_level"),
+                "industry_focus": detected_industry
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Skills analysis failed: {str(e)}"
         )
