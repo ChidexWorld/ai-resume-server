@@ -1,0 +1,102 @@
+{
+  "technology": [
+    "aws certified",
+    "microsoft certified",
+    "google cloud certified",
+    "cisco certified",
+    "comptia security+",
+    "pmp",
+    "cissp",
+    "cisa",
+    "itil",
+    "scrum master"
+  ],
+  "finance": [
+    "cpa",
+    "cfa",
+    "frm",
+    "caia",
+    "fpa",
+    "cfp",
+    "cia",
+    "cma",
+    "acca"
+  ],
+  "healthcare": [
+    "bls",
+    "acls",
+    "cpr",
+    "medical license",
+    "nursing license",
+    "pharmacy license"
+  ],
+  "marketing": [
+    "google ads certified",
+    "hubspot certified",
+    "facebook blueprint",
+    "hootsuite certified",
+    "google analytics certified",
+    "marketo certified"
+  ],
+  "project_management": [
+    "pmp",
+    "prince2",
+    "agile certified",
+    "scrum master",
+    "lean six sigma",
+    "capm"
+  ],
+  "hr": [
+    "shrm-cp",
+    "shrm-scp",
+    "phr",
+    "sphr",
+    "hrci",
+    "cipd"
+  ],
+  "fitness": [
+    "ace certified personal trainer",
+    "ace certified group fitness instructor",
+    "nasm certified personal trainer",
+    "acsm certified",
+    "cpr certification",
+    "first aid certification",
+    "cpr and first aid",
+    "american heart association",
+    "red cross certified"
+  ],
+  "nutrition": [
+    "registered dietitian",
+    "certified nutrition specialist",
+    "certified nutrition consultant",
+    "clinical nutrition certification",
+    "sports nutrition certification",
+    "certified diabetes educator",
+    "food safety certification"
+  ],
+  "security": [
+    "certified protection guard",
+    "security guard license",
+    "cpop certification",
+    "security officer certification",
+    "safety approach training",
+    "security clearance",
+    "armed security license",
+    "loss prevention certification"
+  ],
+  "fashion": [
+    "fashion design certification",
+    "textile certification",
+    "pattern making certification",
+    "fashion merchandising certificate",
+    "sustainable fashion certification"
+  ],
+  "design": [
+    "adobe certified expert",
+    "ux certification",
+    "ui certification",
+    "google ux design certificate",
+    "interaction design certification",
+    "human computer interaction certificate"
+  ]
+}

@@ -182,13 +182,13 @@ async def calculate_job_match(
         
         # Calculate match
         resume_data = resume.to_dict(include_analysis=True)
-        match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
-        
+        match_result = await ai_service.match_resume_to_job(resume_data, job_requirements)
+
         return {
             "resume_id": matching_request.resume_id,
             "job_id": matching_request.job_id,
-            "match_score": match_result["overall_score"],
-            "match_details": match_result["match_details"],
+            "match_score": match_result["overall_match_score"],
+            "match_details": match_result["matching_details"],
             "calculated_at": datetime.utcnow().isoformat()
         }
         
@@ -379,15 +379,15 @@ async def generate_bulk_matches(
                     
                     # Calculate match
                     resume_data = resume.to_dict(include_analysis=True)
-                    match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
-                    
-                    if match_result["overall_score"] >= min_score:
+                    match_result = await ai_service.match_resume_to_job(resume_data, job_requirements)
+
+                    if match_result["overall_match_score"] >= min_score:
                         match = JobMatch(
                             employee_id=resume.employee_id,
                             job_posting_id=job.id,
                             resume_id=resume.id,
-                            match_score=match_result["overall_score"],
-                            match_details=match_result["match_details"]
+                            match_score=match_result["overall_match_score"],
+                            match_details=match_result["matching_details"]
                         )
                         
                         db.add(match)

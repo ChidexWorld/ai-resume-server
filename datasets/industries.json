@@ -1,0 +1,72 @@
+{
+  "technology": [
+    "software",
+    "it services",
+    "telecommunications",
+    "internet",
+    "computer hardware"
+  ],
+  "finance": [
+    "banking",
+    "investment",
+    "insurance",
+    "real estate",
+    "fintech"
+  ],
+  "healthcare": [
+    "hospitals",
+    "pharmaceuticals",
+    "medical devices",
+    "biotechnology",
+    "healthcare services"
+  ],
+  "retail": [
+    "e-commerce",
+    "fashion",
+    "consumer goods",
+    "automotive",
+    "food & beverage"
+  ],
+  "manufacturing": [
+    "aerospace",
+    "automotive",
+    "chemicals",
+    "electronics",
+    "industrial equipment"
+  ],
+  "energy": [
+    "oil & gas",
+    "renewable energy",
+    "utilities",
+    "mining",
+    "environmental services"
+  ],
+  "media": [
+    "advertising",
+    "entertainment",
+    "publishing",
+    "broadcasting",
+    "digital media"
+  ],
+  "consulting": [
+    "management consulting",
+    "strategy",
+    "operations",
+    "hr consulting",
+    "it consulting"
+  ],
+  "education": [
+    "universities",
+    "k-12 schools",
+    "online education",
+    "training",
+    "educational technology"
+  ],
+  "government": [
+    "federal government",
+    "state government",
+    "local government",
+    "military",
+    "non-profit"
+  ]
+}

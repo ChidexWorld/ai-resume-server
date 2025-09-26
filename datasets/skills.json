@@ -1,0 +1,453 @@
+{
+  "technology": {
+    "programming": [
+      "python",
+      "javascript",
+      "java",
+      "c++",
+      "c#",
+      "php",
+      "ruby",
+      "golang",
+      "rust",
+      "sql"
+    ],
+    "web_development": [
+      "html",
+      "css",
+      "react",
+      "angular",
+      "vue",
+      "node.js",
+      "bootstrap",
+      "typescript",
+      "full stack development",
+      "frontend development",
+      "backend development",
+      "api development",
+      "api integration",
+      "expressjs",
+      "responsive design",
+      "user interface design"
+    ],
+    "databases": [
+      "mysql",
+      "postgresql",
+      "mongodb",
+      "redis",
+      "oracle",
+      "sqlite"
+    ],
+    "cloud": [
+      "aws",
+      "azure",
+      "gcp",
+      "docker",
+      "kubernetes",
+      "jenkins"
+    ],
+    "tools": [
+      "git",
+      "jira",
+      "confluence",
+      "slack"
+    ]
+  },
+  "marketing": {
+    "digital_marketing": [
+      "seo",
+      "sem",
+      "google ads",
+      "facebook ads",
+      "content marketing",
+      "email marketing"
+    ],
+    "analytics": [
+      "google analytics",
+      "adobe analytics",
+      "tableau",
+      "power bi",
+      "excel"
+    ],
+    "social_media": [
+      "social media management",
+      "hootsuite",
+      "buffer",
+      "sprout social"
+    ],
+    "content": [
+      "copywriting",
+      "content creation",
+      "blogging",
+      "video editing",
+      "graphic design"
+    ]
+  },
+  "finance": {
+    "accounting": [
+      "quickbooks",
+      "sap",
+      "oracle financials",
+      "gaap",
+      "ifrs",
+      "financial modeling"
+    ],
+    "analysis": [
+      "financial analysis",
+      "risk management",
+      "investment analysis",
+      "budgeting",
+      "forecasting"
+    ],
+    "tools": [
+      "excel",
+      "bloomberg terminal",
+      "matlab",
+      "r",
+      "python",
+      "sql"
+    ]
+  },
+  "healthcare": {
+    "clinical": [
+      "patient care",
+      "medical records",
+      "hipaa",
+      "clinical research",
+      "medical coding"
+    ],
+    "administrative": [
+      "healthcare administration",
+      "insurance",
+      "billing",
+      "scheduling"
+    ],
+    "technical": [
+      "epic",
+      "cerner",
+      "allscripts",
+      "meditech",
+      "emr systems"
+    ]
+  },
+  "sales": {
+    "techniques": [
+      "cold calling",
+      "lead generation",
+      "negotiation",
+      "closing",
+      "prospecting"
+    ],
+    "crm": [
+      "salesforce",
+      "hubspot",
+      "pipedrive",
+      "zoho",
+      "dynamics 365"
+    ],
+    "analysis": [
+      "sales analytics",
+      "forecasting",
+      "pipeline management",
+      "territory management"
+    ]
+  },
+  "human_resources": {
+    "recruitment": [
+      "talent acquisition",
+      "interviewing",
+      "onboarding",
+      "ats systems"
+    ],
+    "compliance": [
+      "employment law",
+      "hr policies",
+      "benefits administration",
+      "payroll"
+    ],
+    "systems": [
+      "workday",
+      "bamboohr",
+      "adp",
+      "successfactors"
+    ]
+  },
+  "operations": {
+    "management": [
+      "project management",
+      "process improvement",
+      "lean",
+      "six sigma",
+      "agile"
+    ],
+    "supply_chain": [
+      "inventory management",
+      "logistics",
+      "procurement",
+      "vendor management"
+    ],
+    "quality": [
+      "quality assurance",
+      "iso standards",
+      "continuous improvement"
+    ]
+  },
+  "education": {
+    "teaching": [
+      "curriculum development",
+      "lesson planning",
+      "classroom management",
+      "student assessment",
+      "mathematics teaching",
+      "computer science teaching",
+      "educational technology",
+      "student mentoring",
+      "academic coaching",
+      "exam preparation",
+      "private tutoring",
+      "group instruction",
+      "individual attention",
+      "student motivation",
+      "educational psychology"
+    ],
+    "technology": [
+      "learning management systems",
+      "blackboard",
+      "canvas",
+      "moodle",
+      "zoom",
+      "computer literacy",
+      "microsoft office",
+      "google classroom",
+      "educational software",
+      "interactive whiteboards",
+      "online teaching",
+      "remote learning",
+      "digital literacy",
+      "programming concepts",
+      "basic coding"
+    ],
+    "administration": [
+      "educational leadership",
+      "student services",
+      "academic advising",
+      "school administration",
+      "student records",
+      "academic planning",
+      "disciplinary management",
+      "parent communication",
+      "staff coordination",
+      "resource management"
+    ],
+    "subject_expertise": [
+      "mathematics",
+      "computer science",
+      "programming",
+      "algebra",
+      "geometry",
+      "calculus",
+      "statistics",
+      "data analysis",
+      "problem solving",
+      "logical thinking",
+      "analytical skills"
+    ]
+  },
+  "fashion": {
+    "design": [
+      "fashion design",
+      "pattern making",
+      "sketching",
+      "color theory",
+      "fabric selection",
+      "garment construction",
+      "trend forecasting",
+      "textile knowledge"
+    ],
+    "software": [
+      "adobe illustrator",
+      "adobe photoshop",
+      "cad",
+      "fashion cad",
+      "pattern design software"
+    ],
+    "production": [
+      "product development",
+      "manufacturing",
+      "quality control",
+      "vendor management",
+      "merchandising",
+      "collection development"
+    ],
+    "business": [
+      "brand development",
+      "market research",
+      "fashion marketing",
+      "retail buying",
+      "fashion merchandising"
+    ]
+  },
+  "nutrition": {
+    "clinical": [
+      "nutrition assessment",
+      "dietary counseling",
+      "meal planning",
+      "clinical nutrition",
+      "medical nutrition therapy",
+      "nutrition education",
+      "food service management"
+    ],
+    "specialized": [
+      "sports nutrition",
+      "pediatric nutrition",
+      "geriatric nutrition",
+      "eating disorders",
+      "diabetes management",
+      "weight management"
+    ],
+    "food_safety": [
+      "food preparation",
+      "food sanitation",
+      "haccp",
+      "food safety regulations",
+      "kitchen management"
+    ],
+    "programs": [
+      "wic program",
+      "nutrition programs",
+      "community nutrition",
+      "public health nutrition"
+    ]
+  },
+  "fitness": {
+    "training": [
+      "personal training",
+      "group fitness",
+      "strength training",
+      "cardiovascular training",
+      "functional training",
+      "sports conditioning",
+      "rehabilitation"
+    ],
+    "specializations": [
+      "weight loss",
+      "muscle building",
+      "sports performance",
+      "injury prevention",
+      "corrective exercise",
+      "flexibility training"
+    ],
+    "certifications": [
+      "ace certified",
+      "nasm certified",
+      "acsm certified",
+      "cpr certified",
+      "first aid certified"
+    ],
+    "business": [
+      "client retention",
+      "program design",
+      "fitness assessment",
+      "goal setting",
+      "motivation techniques"
+    ]
+  },
+  "design": {
+    "ux_ui": [
+      "user experience design",
+      "user interface design",
+      "wireframing",
+      "prototyping",
+      "user research",
+      "usability testing",
+      "information architecture",
+      "interaction design"
+    ],
+    "tools": [
+      "sketch",
+      "figma",
+      "adobe xd",
+      "invision",
+      "balsamiq",
+      "zeplin",
+      "principle"
+    ],
+    "web_design": [
+      "html5",
+      "css3",
+      "javascript",
+      "responsive design",
+      "mobile design",
+      "web accessibility"
+    ],
+    "research": [
+      "user interviews",
+      "surveys",
+      "a/b testing",
+      "analytics",
+      "persona development",
+      "journey mapping"
+    ]
+  },
+  "security": {
+    "physical_security": [
+      "surveillance",
+      "access control",
+      "patrol procedures",
+      "incident response",
+      "emergency procedures",
+      "security protocols",
+      "report writing"
+    ],
+    "equipment": [
+      "cctv systems",
+      "alarm systems",
+      "security equipment",
+      "communication devices",
+      "restraining devices"
+    ],
+    "skills": [
+      "observation skills",
+      "investigation skills",
+      "conflict resolution",
+      "crowd control",
+      "first aid",
+      "self defense"
+    ],
+    "compliance": [
+      "security regulations",
+      "safety compliance",
+      "criminal justice knowledge",
+      "legal procedures"
+    ]
+  },
+  "soft_skills": {
+    "leadership": [
+      "team leadership",
+      "mentoring",
+      "coaching",
+      "strategic thinking",
+      "decision making"
+    ],
+    "communication": [
+      "public speaking",
+      "presentation",
+      "writing",
+      "interpersonal",
+      "negotiation"
+    ],
+    "problem_solving": [
+      "analytical thinking",
+      "creative problem solving",
+      "troubleshooting",
+      "innovation"
+    ],
+    "personal": [
+      "time management",
+      "adaptability",
+      "attention to detail",
+      "multitasking",
+      "organization"
+    ]
+  }
+}

@@ -296,11 +296,11 @@ async def get_job_applications(
                     "industry": job.department,
                     "matching_weights": job.matching_weights or {}
                 }
-                ai_match_data = ai_service.match_resume_to_job(resume_data, job_requirements)
+                ai_match_data = await ai_service.match_resume_to_job(resume_data, job_requirements)
 
                 # Update application match score if it's outdated
-                if app.match_score != ai_match_data.get("overall_score", app.match_score):
-                    app.match_score = ai_match_data.get("overall_score", app.match_score)
+                if app.match_score != ai_match_data.get("overall_match_score", app.match_score):
+                    app.match_score = ai_match_data.get("overall_match_score", app.match_score)
                     db.commit()
 
             except Exception as e:
@@ -377,7 +377,7 @@ async def update_application_status(
                         "industry": job.department,
                         "matching_weights": job.matching_weights or {}
                     }
-                    ai_match_data = ai_service.match_resume_to_job(resume_data, job_requirements)
+                    ai_match_data = await ai_service.match_resume_to_job(resume_data, job_requirements)
             except Exception as e:
                 print(f"AI analysis failed for application {application.id}: {e}")
 
@@ -507,11 +507,11 @@ async def search_candidates(
                             "industry": "general"
                         }
                         resume_data = resume.to_dict(include_analysis=True)
-                        ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
+                        ai_match = await ai_service.match_resume_to_job(resume_data, job_requirements)
 
                         # Use AI match score to determine relevance
-                        if ai_match.get("overall_score", 0) >= 60:  # 60% threshold
-                            matching_skills = ai_match.get("match_details", {}).get("matching_skills", [])
+                        if ai_match.get("overall_match_score", 0) >= 60:  # 60% threshold
+                            matching_skills = ai_match.get("matching_details", {}).get("matching_skills", [])
 
                     except Exception as e:
                         print(f"AI semantic matching failed for resume {resume.id}: {e}")
@@ -528,7 +528,7 @@ async def search_candidates(
             
             # Calculate AI match score for search results
             ai_match_score = None
-            ai_match_details = None
+            ai_matching_details = None
             if AI_SERVICE_AVAILABLE and ai_service and skills:
                 try:
                     job_requirements = {
@@ -538,9 +538,9 @@ async def search_candidates(
                         "industry": "general"
                     }
                     resume_data = resume.to_dict(include_analysis=True)
-                    ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
-                    ai_match_score = ai_match.get("overall_score")
-                    ai_match_details = ai_match.get("match_details")
+                    ai_match = await ai_service.match_resume_to_job(resume_data, job_requirements)
+                    ai_match_score = ai_match.get("overall_match_score")
+                    ai_matching_details = ai_match.get("matching_details")
                 except Exception as e:
                     print(f"AI match scoring failed for resume {resume.id}: {e}")
 
@@ -553,7 +553,7 @@ async def search_candidates(
                     "experience_years": resume.total_experience_years,
                     "communication_score": voice_analysis.overall_communication_score if voice_analysis else None,
                     "ai_match_score": ai_match_score,
-                    "ai_match_details": ai_match_details
+                    "ai_matching_details": ai_matching_details
                 }
             ))
             
@@ -624,10 +624,10 @@ async def auto_score_applications(
                     resume = db.query(Resume).filter(Resume.id == app.resume_id).first()
                     if resume:
                         resume_data = resume.to_dict(include_analysis=True)
-                        ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
+                        ai_match = await ai_service.match_resume_to_job(resume_data, job_requirements)
 
                         # Update match score
-                        new_score = ai_match.get("overall_score", app.match_score)
+                        new_score = ai_match.get("overall_match_score", app.match_score)
                         if app.match_score != new_score:
                             app.match_score = new_score
                             updated_count += 1
@@ -703,10 +703,10 @@ async def get_ai_candidate_recommendations(
         for resume in resumes:
             try:
                 resume_data = resume.to_dict(include_analysis=True)
-                ai_match = ai_service.match_resume_to_job(resume_data, job_requirements)
+                ai_match = await ai_service.match_resume_to_job(resume_data, job_requirements)
 
                 # Only include high-scoring candidates
-                if ai_match.get("overall_score", 0) >= 70:  # 70% threshold for recommendations
+                if ai_match.get("overall_match_score", 0) >= 70:  # 70% threshold for recommendations
                     employee = resume.employee
 
                     # Get voice analysis if available
@@ -721,13 +721,13 @@ async def get_ai_candidate_recommendations(
                         resume_analysis=resume_data,
                         voice_analysis=voice_analysis.to_dict(include_analysis=True) if voice_analysis else None,
                         match_summary={
-                            "ai_match_score": ai_match.get("overall_score"),
-                            "matching_skills": ai_match.get("match_details", {}).get("matching_skills", []),
+                            "ai_match_score": ai_match.get("overall_match_score"),
+                            "matching_skills": ai_match.get("matching_details", {}).get("matching_skills", []),
                             "experience_years": resume.total_experience_years,
                             "communication_score": voice_analysis.overall_communication_score if voice_analysis else None,
-                            "strengths": ai_match.get("match_details", {}).get("strengths", []),
-                            "concerns": ai_match.get("match_details", {}).get("concerns", []),
-                            "recommendations": ai_match.get("match_details", {}).get("recommendations", [])
+                            "strengths": ai_match.get("matching_details", {}).get("strengths", []),
+                            "concerns": ai_match.get("matching_details", {}).get("concerns", []),
+                            "recommendations": ai_match.get("matching_details", {}).get("recommendations", [])
                         }
                     ))
 

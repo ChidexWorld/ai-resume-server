@@ -134,7 +134,7 @@ async def upload_resume(
             resume.raw_text = extracted_text
 
             # Analyze resume with AI
-            analysis_results = ai_service.analyze_resume(extracted_text)
+            analysis_results = ai_service.analyze_resume_from_text(extracted_text)
             resume.set_analysis_results(analysis_results)
 
             db.commit()
@@ -255,8 +255,8 @@ async def upload_voice_recording(
             voice_analysis.set_transcript(transcript, confidence)
             db.commit()
 
-            # Analyze voice
-            analysis_results = ai_service.analyze_voice(file_info["file_path"], transcript)
+            # Analyze voice resume
+            analysis_results = ai_service.analyze_voice_resume(file_info["file_path"])
             voice_analysis.set_analysis_results(analysis_results)
 
             db.commit()
@@ -490,12 +490,12 @@ async def apply_to_job(
                 job_requirements = job.get_matching_criteria()
                 resume_data = resume.to_dict(include_analysis=True)
 
-                match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
+                match_result = await ai_service.match_resume_to_job(resume_data, job_requirements)
 
                 application.set_match_results(
-                    match_score=match_result["overall_score"],
-                    match_details=match_result["match_details"],
-                    recommendation=f"Match score: {match_result['overall_score']}%"
+                    match_score=match_result["overall_match_score"],
+                    match_details=match_result["matching_details"],
+                    recommendation=f"Match score: {match_result['overall_match_score']}%"
                 )
 
             except Exception as e:
@@ -603,14 +603,14 @@ async def get_job_recommendations(
                 job_requirements = job.get_matching_criteria()
                 resume_data = latest_resume.to_dict(include_analysis=True)
 
-                match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
-                match_score = match_result["overall_score"]
+                match_result = await ai_service.match_resume_to_job(resume_data, job_requirements)
+                match_score = match_result["overall_match_score"]
 
                 if match_score >= min_score:
                     recommendations.append({
                         "job": job,
                         "match_score": match_score,
-                        "match_details": match_result["match_details"]
+                        "match_details": match_result["matching_details"]
                     })
 
             except Exception as e:
@@ -694,7 +694,7 @@ async def analyze_job_match(
         job_requirements = job.get_matching_criteria()
         resume_data = resume.to_dict(include_analysis=True)
 
-        match_result = ai_service.match_resume_to_job(resume_data, job_requirements)
+        match_result = await ai_service.match_resume_to_job(resume_data, job_requirements)
 
         return {
             "job": job.to_dict(),
@@ -706,11 +706,11 @@ async def analyze_job_match(
                 "total_experience_years": resume_data.get("total_experience_years")
             },
             "match_analysis": {
-                "overall_score": match_result["overall_score"],
-                "match_details": match_result["match_details"],
-                "strengths": match_result["match_details"].get("matching_skills", []),
-                "gaps": match_result["match_details"].get("missing_skills", []),
-                "recommendations": match_result["match_details"].get("recommendations", [])
+                "overall_score": match_result["overall_match_score"],
+                "match_details": match_result["matching_details"],
+                "strengths": match_result["matching_details"].get("matching_skills", []),
+                "gaps": match_result["matching_details"].get("missing_skills", []),
+                "recommendations": match_result["matching_details"].get("recommendations", [])
             },
             "analysis_date": datetime.now().isoformat()
         }
