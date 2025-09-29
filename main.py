@@ -6,7 +6,8 @@ import os
 import uvicorn
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -135,14 +136,30 @@ async def root():
         "status": "running",
         "docs": "/docs",
         "redoc": "/redoc",
+        "dashboards": {
+            "employer_dashboard": "/employer-dashboard"
+        },
         "endpoints": {
             "authentication": "/api/auth",
-            "employee": "/api/employee", 
+            "employee": "/api/employee",
             "employer": "/api/employer",
             "matching": "/api/matching",
             "admin": "/api/admin"
         }
     }
+
+
+@app.get("/employer-dashboard")
+async def employer_dashboard():
+    """Serve the employer dashboard HTML file."""
+    dashboard_path = os.path.join(os.getcwd(), "employer_dashboard.html")
+    if os.path.exists(dashboard_path):
+        return FileResponse(dashboard_path)
+    else:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Employer dashboard not found"}
+        )
 
 
 @app.get("/api/health")

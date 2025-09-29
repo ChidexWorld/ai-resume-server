@@ -129,16 +129,29 @@ class Resume(Base):
         """Get summarized experience information."""
         if not self.experience:
             return {"total_years": 0, "companies": [], "positions": []}
-        
+
+        # Handle case where experience is stored as string (parse JSON)
+        experience_data = self.experience
+        if isinstance(experience_data, str):
+            try:
+                import json
+                experience_data = json.loads(experience_data)
+            except (json.JSONDecodeError, ValueError):
+                return {"total_years": self.total_experience_years or 0, "companies": [], "positions": []}
+
+        if not isinstance(experience_data, list):
+            return {"total_years": self.total_experience_years or 0, "companies": [], "positions": []}
+
         companies = []
         positions = []
-        
-        for exp in self.experience:
-            if exp.get("company"):
-                companies.append(exp["company"])
-            if exp.get("position") or exp.get("title"):
-                positions.append(exp.get("position") or exp.get("title"))
-        
+
+        for exp in experience_data:
+            if isinstance(exp, dict):
+                if exp.get("company"):
+                    companies.append(exp["company"])
+                if exp.get("position") or exp.get("title"):
+                    positions.append(exp.get("position") or exp.get("title"))
+
         return {
             "total_years": self.total_experience_years or 0,
             "companies": list(set(companies)),
@@ -149,18 +162,31 @@ class Resume(Base):
         """Get summarized education information."""
         if not self.education:
             return {"highest_degree": None, "institutions": [], "fields": []}
-        
+
+        # Handle case where education is stored as string (parse JSON)
+        education_data = self.education
+        if isinstance(education_data, str):
+            try:
+                import json
+                education_data = json.loads(education_data)
+            except (json.JSONDecodeError, ValueError):
+                return {"highest_degree": None, "institutions": [], "fields": []}
+
+        if not isinstance(education_data, list):
+            return {"highest_degree": None, "institutions": [], "fields": []}
+
         degrees = []
         institutions = []
         fields = []
-        
-        for edu in self.education:
-            if edu.get("degree"):
-                degrees.append(edu["degree"])
-            if edu.get("institution"):
-                institutions.append(edu["institution"])
-            if edu.get("field") or edu.get("major"):
-                fields.append(edu.get("field") or edu.get("major"))
+
+        for edu in education_data:
+            if isinstance(edu, dict):
+                if edu.get("degree"):
+                    degrees.append(edu["degree"])
+                if edu.get("institution"):
+                    institutions.append(edu["institution"])
+                if edu.get("field") or edu.get("major"):
+                    fields.append(edu.get("field") or edu.get("major"))
         
         # Determine highest degree (simplified logic)
         degree_hierarchy = ["phd", "doctorate", "master", "bachelor", "associate", "diploma", "certificate"]
@@ -203,13 +229,23 @@ class Resume(Base):
         }
         
         if include_analysis and self.is_analyzed:
+            def safe_json_parse(data):
+                """Safely parse JSON data that might be stored as string."""
+                if isinstance(data, str):
+                    try:
+                        import json
+                        return json.loads(data)
+                    except (json.JSONDecodeError, ValueError):
+                        return data
+                return data
+
             resume_data.update({
-                "contact_info": self.contact_info,
-                "skills": self.skills,
-                "experience": self.experience,
-                "education": self.education,
-                "certifications": self.certifications,
-                "languages": self.languages,
+                "contact_info": safe_json_parse(self.contact_info),
+                "skills": safe_json_parse(self.skills),
+                "experience": safe_json_parse(self.experience),
+                "education": safe_json_parse(self.education),
+                "certifications": safe_json_parse(self.certifications),
+                "languages": safe_json_parse(self.languages),
                 "professional_summary": self.professional_summary,
                 "experience_level": self.experience_level,
                 "total_experience_years": self.total_experience_years,

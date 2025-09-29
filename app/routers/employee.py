@@ -4,12 +4,14 @@ Employee router for resume upload, voice analysis, and job applications.
 import os
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, and_, or_
 
 from app.database import get_db
 from app.models import User, Resume, VoiceAnalysis, Application, JobPosting, UserType
+from app.models.resume import ResumeStatus
+from app.models.voice_analysis import VoiceStatus
 from app.routers.auth import get_current_active_user
 from app.services import ai_service, AI_SERVICE_AVAILABLE
 from app.services.file_service import FileService
@@ -34,6 +36,90 @@ def verify_employee_user(current_user: User = Depends(get_current_active_user)) 
             detail="This endpoint is only accessible to employees"
         )
     return current_user
+
+
+async def get_skill_based_recommendations(
+    current_user: User,
+    db: Session,
+    limit: int,
+    min_score: int,
+    industry_filter: Optional[str]
+):
+    """Fast skill-based job recommendations without AI."""
+    print(f"🔍 Getting skill-based recommendations for user {current_user.id}")
+
+    # Get employee's latest resume
+    latest_resume = db.query(Resume).filter(
+        Resume.employee_id == current_user.id,
+        Resume.status == ResumeStatus.ANALYZED,
+        Resume.is_active == True
+    ).order_by(desc(Resume.created_at)).first()
+
+    if not latest_resume:
+        print(f"⚠️ No analyzed resume found for user {current_user.id}")
+        return []
+
+    # Extract user skills
+    resume_data = latest_resume.to_dict(include_analysis=True)
+    user_skills = set()
+    if "skills" in resume_data:
+        for skill_category in resume_data["skills"].values():
+            user_skills.update([s.lower().strip() for s in skill_category])
+
+    # Get active job postings
+    query = db.query(JobPosting).filter(JobPosting.status == "active")
+
+    if industry_filter:
+        query = query.filter(JobPosting.department.ilike(f"%{industry_filter}%"))
+
+    jobs = query.limit(50).all()
+    print(f"📊 Found {len(jobs)} active job postings")
+
+    recommendations = []
+
+    for job in jobs:
+        try:
+            # Calculate skill-based match score
+            job_required_skills = set([s.lower().strip() for s in (job.required_skills or [])])
+            job_preferred_skills = set([s.lower().strip() for s in (job.preferred_skills or [])])
+
+            all_job_skills = job_required_skills.union(job_preferred_skills)
+
+            if not all_job_skills:
+                continue
+
+            # Calculate match scores
+            required_matches = len(job_required_skills.intersection(user_skills))
+            preferred_matches = len(job_preferred_skills.intersection(user_skills))
+
+            # Weighted scoring: required skills are more important
+            required_score = (required_matches / max(len(job_required_skills), 1)) * 70
+            preferred_score = (preferred_matches / max(len(job_preferred_skills), 1)) * 30
+
+            total_score = min(100, int(required_score + preferred_score))
+
+            if total_score >= min_score:
+                recommendations.append({
+                    "match_id": job.id,
+                    "job": job.to_dict(),
+                    "match_score": total_score,
+                    "match_details": {
+                        "matching_skills": list(user_skills.intersection(all_job_skills)),
+                        "missing_skills": list(job_required_skills - user_skills),
+                        "skill_match_ratio": len(user_skills.intersection(all_job_skills)) / len(all_job_skills)
+                    },
+                    "created_at": datetime.now().isoformat()
+                })
+
+        except Exception as e:
+            print(f"Skill-based matching failed for job {job.id}: {e}")
+            continue
+
+    # Sort by match score
+    recommendations.sort(key=lambda x: x["match_score"], reverse=True)
+
+    print(f"✅ Returning {len(recommendations)} recommendations")
+    return recommendations[:limit]
 
 
 @router.post(
@@ -449,7 +535,7 @@ async def apply_to_job(
             resume = db.query(Resume).filter(
                 Resume.id == application_data.resume_id,
                 Resume.employee_id == current_user.id,
-                Resume.status == "analyzed"
+                Resume.status == ResumeStatus.ANALYZED
             ).first()
             
             if not resume:
@@ -464,7 +550,7 @@ async def apply_to_job(
             voice_analysis = db.query(VoiceAnalysis).filter(
                 VoiceAnalysis.id == application_data.voice_analysis_id,
                 VoiceAnalysis.employee_id == current_user.id,
-                VoiceAnalysis.status == "completed"
+                VoiceAnalysis.status == VoiceStatus.COMPLETED
             ).first()
             
             if not voice_analysis:
@@ -510,8 +596,24 @@ async def apply_to_job(
         db.commit()
         db.refresh(application)
         
-        return ApplicationResponse.from_orm(application)
-        
+        app_dict = {
+            "id": application.id,
+            "employee_id": application.employee_id,
+            "job_posting_id": application.job_posting_id,
+            "resume_id": application.resume_id,
+            "voice_analysis_id": application.voice_analysis_id,
+            "cover_letter": application.cover_letter,
+            "status": application.status.value,
+            "match_score": application.match_score,
+            "match_details": application.match_details,
+            "recommendation": application.ai_recommendation,
+            "applied_at": application.applied_at.isoformat(),
+            "reviewed_at": application.reviewed_at.isoformat() if application.reviewed_at else None,
+            "interview_scheduled_at": application.interview_scheduled.isoformat() if application.interview_scheduled else None,
+            "notes": application.employer_notes
+        }
+        return ApplicationResponse.model_validate(app_dict)
+
     except HTTPException:
         raise
     except Exception as e:
@@ -532,7 +634,26 @@ async def get_my_applications(
         Application.employee_id == current_user.id
     ).order_by(desc(Application.applied_at)).all()
     
-    return [ApplicationResponse.from_orm(app) for app in applications]
+    result = []
+    for app in applications:
+        app_dict = {
+            "id": app.id,
+            "employee_id": app.employee_id,
+            "job_posting_id": app.job_posting_id,
+            "resume_id": app.resume_id,
+            "voice_analysis_id": app.voice_analysis_id,
+            "cover_letter": app.cover_letter,
+            "status": app.status.value,
+            "match_score": app.match_score,
+            "match_details": app.match_details,
+            "recommendation": app.ai_recommendation,
+            "applied_at": app.applied_at.isoformat(),
+            "reviewed_at": app.reviewed_at.isoformat() if app.reviewed_at else None,
+            "interview_scheduled_at": app.interview_scheduled.isoformat() if app.interview_scheduled else None,
+            "notes": app.employer_notes
+        }
+        result.append(ApplicationResponse.model_validate(app_dict))
+    return result
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationResponse)
@@ -552,8 +673,24 @@ async def get_application(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Application not found"
         )
-    
-    return ApplicationResponse.from_orm(application)
+
+    app_dict = {
+        "id": application.id,
+        "employee_id": application.employee_id,
+        "job_posting_id": application.job_posting_id,
+        "resume_id": application.resume_id,
+        "voice_analysis_id": application.voice_analysis_id,
+        "cover_letter": application.cover_letter,
+        "status": application.status.value,
+        "match_score": application.match_score,
+        "match_details": application.match_details,
+        "recommendation": application.ai_recommendation,
+        "applied_at": application.applied_at.isoformat(),
+        "reviewed_at": application.reviewed_at.isoformat() if application.reviewed_at else None,
+        "interview_scheduled_at": application.interview_scheduled.isoformat() if application.interview_scheduled else None,
+        "notes": application.employer_notes
+    }
+    return ApplicationResponse.model_validate(app_dict)
 
 
 @router.get("/job-recommendations", response_model=List[JobMatchResponse])
@@ -566,17 +703,16 @@ async def get_job_recommendations(
 ):
     """Get AI-powered job recommendations for the employee."""
     try:
-        # Check if AI service is available
+        # Always use AI service if available
         if not AI_SERVICE_AVAILABLE:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI service not available. Job recommendations require AI analysis."
+            return await get_skill_based_recommendations(
+                current_user, db, limit, min_score, industry_filter
             )
 
         # Get employee's latest resume
         latest_resume = db.query(Resume).filter(
             Resume.employee_id == current_user.id,
-            Resume.status == "analyzed",
+            Resume.status == ResumeStatus.ANALYZED,
             Resume.is_active == True
         ).order_by(desc(Resume.created_at)).first()
 
@@ -586,23 +722,38 @@ async def get_job_recommendations(
                 detail="No analyzed resume found. Please upload and analyze a resume first."
             )
 
-        # Get active job postings
+        # Get active job postings with improved query
         query = db.query(JobPosting).filter(JobPosting.status == "active")
 
         # Apply industry filter if provided
         if industry_filter:
             query = query.filter(JobPosting.department.ilike(f"%{industry_filter}%"))
 
-        jobs = query.limit(100).all()  # Limit for performance
+        # Limit to reasonable number for AI processing
+        jobs = query.limit(30).all()  # Reduced from 100 to 30 for faster processing
 
         recommendations = []
+        resume_data = latest_resume.to_dict(include_analysis=True)
 
+        # Process jobs in smaller batches for better performance
         for job in jobs:
             try:
-                # Calculate match score
-                job_requirements = job.get_matching_criteria()
-                resume_data = latest_resume.to_dict(include_analysis=True)
+                # Quick skill-based pre-filtering before expensive AI call
+                job_skills = set((job.required_skills or []) + (job.preferred_skills or []))
+                resume_skills = set()
+                if "skills" in resume_data:
+                    for skill_category in resume_data["skills"].values():
+                        resume_skills.update([s.lower() for s in skill_category])
 
+                # Calculate basic skill overlap ratio
+                if job_skills:
+                    skill_overlap = len(job_skills.intersection(resume_skills)) / len(job_skills)
+                    # Skip jobs with very low skill overlap to save AI calls
+                    if skill_overlap < 0.1:  # Less than 10% skill match
+                        continue
+
+                # Only do expensive AI calculation for promising matches
+                job_requirements = job.get_matching_criteria()
                 match_result = await ai_service.match_resume_to_job(resume_data, job_requirements)
                 match_score = match_result["overall_match_score"]
 
@@ -612,6 +763,10 @@ async def get_job_recommendations(
                         "match_score": match_score,
                         "match_details": match_result["matching_details"]
                     })
+
+                # Stop after finding enough good matches
+                if len(recommendations) >= limit:
+                    break
 
             except Exception as e:
                 print(f"Match calculation failed for job {job.id}: {e}")
@@ -674,13 +829,13 @@ async def analyze_job_match(
             resume = db.query(Resume).filter(
                 Resume.id == resume_id,
                 Resume.employee_id == current_user.id,
-                Resume.status == "analyzed",
+                Resume.status == ResumeStatus.ANALYZED,
                 Resume.is_active == True
             ).first()
         else:
             resume = db.query(Resume).filter(
                 Resume.employee_id == current_user.id,
-                Resume.status == "analyzed",
+                Resume.status == ResumeStatus.ANALYZED,
                 Resume.is_active == True
             ).order_by(desc(Resume.created_at)).first()
 
@@ -741,7 +896,7 @@ async def get_skills_analysis(
         # Get latest analyzed resume
         latest_resume = db.query(Resume).filter(
             Resume.employee_id == current_user.id,
-            Resume.status == "analyzed",
+            Resume.status == ResumeStatus.ANALYZED,
             Resume.is_active == True
         ).order_by(desc(Resume.created_at)).first()
 
@@ -762,7 +917,7 @@ async def get_skills_analysis(
         # Analyze skill coverage
         resume_skills = []
         if "skills" in resume_data:
-            for category, skills in resume_data["skills"].items():
+            for _, skills in resume_data["skills"].items():
                 resume_skills.extend(skills)
 
         resume_skills_lower = [skill.lower() for skill in resume_skills]
@@ -805,3 +960,317 @@ async def get_skills_analysis(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Skills analysis failed: {str(e)}"
         )
+
+@router.get("/jobs/search",
+           summary="Search Jobs",
+           description="Search and filter job postings with various criteria. Returns all active jobs if no filters are applied.",
+           response_description="List of job postings matching the search criteria",
+           tags=["Jobs"])
+async def search_jobs(
+    q: Optional[str] = Query(None, description="Search query for job title, description, or company"),
+    location: Optional[str] = Query(None, description="Location filter"),
+    job_type: Optional[str] = Query(None, description="Job type filter (full_time, part_time, contract, etc.)"),
+    experience_level: Optional[str] = Query(None, description="Experience level filter (entry, mid, senior, executive)"),
+    remote_allowed: Optional[bool] = Query(None, description="Filter for remote-allowed jobs"),
+    min_salary: Optional[int] = Query(None, ge=0, description="Minimum salary filter"),
+    max_salary: Optional[int] = Query(None, ge=0, description="Maximum salary filter"),
+    skills: Optional[str] = Query(None, description="Comma-separated skills to search for"),
+    department: Optional[str] = Query(None, description="Department filter"),
+    limit: int = Query(20, le=100, description="Maximum number of results"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    current_user: User = Depends(verify_employee_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Search for jobs based on various criteria.
+
+    This endpoint allows employees to search for job postings using multiple filters:
+    - Text search in job title, description, and company name
+    - Location-based filtering
+    - Job type and experience level filtering
+    - Salary range filtering
+    - Skills-based matching
+    - Remote work preferences
+
+    Returns a list of matching job postings with basic information.
+    """
+    try:
+        # Start with base query for active job postings
+        # current_user is required for authentication but not used in filtering
+        query = db.query(JobPosting).filter(JobPosting.status == "active")
+
+        # Apply text search filter
+        if q and q.strip():
+            search_term = f"%{q.lower()}%"
+            query = query.filter(
+                or_(
+                    JobPosting.title.ilike(search_term),
+                    JobPosting.description.ilike(search_term),
+                    JobPosting.department.ilike(search_term)
+                )
+            )
+
+        # Apply location filter
+        if location and location.strip():
+            location_term = f"%{location.lower()}%"
+            query = query.filter(JobPosting.location.ilike(location_term))
+
+        # Apply job type filter
+        if job_type and job_type.strip():
+            query = query.filter(JobPosting.job_type == job_type)
+
+        # Apply experience level filter
+        if experience_level and experience_level.strip():
+            query = query.filter(JobPosting.experience_level == experience_level)
+
+        # Apply remote allowed filter
+        if remote_allowed is not None:
+            query = query.filter(JobPosting.remote_allowed == remote_allowed)
+
+        # Apply salary filters
+        if min_salary is not None and min_salary > 0:
+            query = query.filter(
+                or_(
+                    JobPosting.salary_min >= min_salary,
+                    JobPosting.salary_max >= min_salary
+                )
+            )
+
+        if max_salary is not None and max_salary > 0:
+            query = query.filter(
+                or_(
+                    JobPosting.salary_min <= max_salary,
+                    JobPosting.salary_max <= max_salary
+                )
+            )
+
+        # Apply department filter
+        if department and department.strip():
+            dept_term = f"%{department.lower()}%"
+            query = query.filter(JobPosting.department.ilike(dept_term))
+
+        # Apply skills filter (search in required_skills and preferred_skills JSON fields)
+        if skills and skills.strip():
+            skills_list = [skill.strip().lower() for skill in skills.split(',') if skill.strip()]
+            skills_conditions = []
+
+            for skill in skills_list:
+                # Search in required_skills JSON array
+                skills_conditions.extend([
+                    JobPosting.required_skills.contains([skill]),
+                    JobPosting.preferred_skills.contains([skill])
+                ])
+
+                # Also search as case-insensitive partial match in JSON
+                skills_conditions.extend([
+                    JobPosting.required_skills.op('::text')(f'%{skill}%'),
+                    JobPosting.preferred_skills.op('::text')(f'%{skill}%')
+                ])
+
+            if skills_conditions:
+                query = query.filter(or_(*skills_conditions))
+
+        # Apply ordering (most recent first)
+        query = query.order_by(desc(JobPosting.created_at))
+
+        # Apply pagination
+        total_count = query.count()
+        jobs = query.offset(offset).limit(limit).all()
+
+        # Convert to response format
+        job_results = []
+        for job in jobs:
+            # Get employer information
+            employer = db.query(User).filter(User.id == job.employer_id).first()
+            company_name = "Unknown Company"
+            if employer:
+                if hasattr(employer, 'company_name') and employer.company_name:
+                    company_name = employer.company_name
+                else:
+                    company_name = f"{employer.first_name} {employer.last_name}".strip() or employer.email
+
+            # Format salary range
+            salary_range = "Salary not specified"
+            if job.salary_min and job.salary_max:
+                salary_range = f"{job.currency} {job.salary_min:,} - {job.salary_max:,}"
+            elif job.salary_min:
+                salary_range = f"From {job.currency} {job.salary_min:,}"
+            elif job.salary_max:
+                salary_range = f"Up to {job.currency} {job.salary_max:,}"
+
+            job_data = {
+                "id": job.id,
+                "employer_id": job.employer_id,
+                "title": job.title,
+                "description": job.description,
+                "department": job.department,
+                "location": job.location,
+                "remote_allowed": job.remote_allowed,
+                "job_type": job.job_type.value,
+                "experience_level": job.experience_level.value,
+                "salary_range": salary_range,
+                "currency": job.currency,
+                "status": job.status.value,
+                "is_urgent": job.is_urgent,
+                "is_active": job.is_active,
+                "applications_count": job.applications_count,
+                "max_applications": job.max_applications,
+                "auto_match_enabled": job.auto_match_enabled,
+                "minimum_match_score": job.minimum_match_score,
+                "created_at": job.created_at.isoformat(),
+                "updated_at": job.updated_at.isoformat(),
+                "expires_at": job.expires_at.isoformat() if job.expires_at else None,
+                "required_skills": job.required_skills or [],
+                "preferred_skills": job.preferred_skills or [],
+                "required_education": job.required_education,
+                "required_experience": job.required_experience,
+                "communication_requirements": job.communication_requirements,
+                "matching_weights": job.matching_weights,
+                "company_name": company_name
+            }
+            job_results.append(job_data)
+
+        return {
+            "jobs": job_results,
+            "total_count": total_count,
+            "limit": limit,
+            "offset": offset,
+            "has_more": (offset + limit) < total_count
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Job search failed: {str(e)}"
+        )
+@router.get("/jobs/{job_id}",
+           summary="Get Job Details",
+           description="Get detailed information about a specific job posting including match analysis",
+           response_description="Complete job details with match analysis and application status",
+           tags=["Jobs"])
+async def get_job_details(
+    job_id: int,
+    current_user: User = Depends(verify_employee_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed information about a specific job posting.
+
+    Returns comprehensive job details including:
+    - Job description and requirements
+    - Company information
+    - Salary and benefits
+    - Application status (if already applied)
+    - Match analysis (if resume is available)
+    """
+    try:
+        # Get job posting
+        job = db.query(JobPosting).filter(
+            JobPosting.id == job_id,
+            JobPosting.status == "active"
+        ).first()
+
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Job posting not found or not active"
+            )
+
+        # Get employer information
+        employer = db.query(User).filter(User.id == job.employer_id).first()
+        company_name = "Unknown Company"
+        if employer:
+            if hasattr(employer, 'company_name') and employer.company_name:
+                company_name = employer.company_name
+            else:
+                company_name = f"{employer.first_name} {employer.last_name}".strip() or employer.email
+
+        # Check if user has already applied
+        existing_application = db.query(Application).filter(
+            Application.employee_id == current_user.id,
+            Application.job_posting_id == job_id
+        ).first()
+
+        # Get match analysis if available
+        match_analysis = None
+        if AI_SERVICE_AVAILABLE:
+            try:
+                # Get user's latest analyzed resume
+                latest_resume = db.query(Resume).filter(
+                    Resume.employee_id == current_user.id,
+                    Resume.status == ResumeStatus.ANALYZED,
+                    Resume.is_active == True
+                ).order_by(desc(Resume.created_at)).first()
+
+                if latest_resume:
+                    job_requirements = job.get_matching_criteria()
+                    resume_data = latest_resume.to_dict(include_analysis=True)
+
+                    match_result = await ai_service.match_resume_to_job(resume_data, job_requirements)
+                    match_analysis = {
+                        "overall_score": match_result["overall_match_score"],
+                        "match_details": match_result["matching_details"],
+                        "strengths": match_result["matching_details"].get("matching_skills", []),
+                        "gaps": match_result["matching_details"].get("missing_skills", []),
+                        "recommendations": match_result["matching_details"].get("recommendations", [])
+                    }
+            except Exception as e:
+                print(f"Match analysis failed: {e}")
+                # Continue without match analysis
+
+        # Format salary range
+        salary_range = "Salary not specified"
+        if job.salary_min and job.salary_max:
+            salary_range = f"{job.currency} {job.salary_min:,} - {job.salary_max:,}"
+        elif job.salary_min:
+            salary_range = f"From {job.currency} {job.salary_min:,}"
+        elif job.salary_max:
+            salary_range = f"Up to {job.currency} {job.salary_max:,}"
+
+        job_data = {
+            "id": job.id,
+            "employer_id": job.employer_id,
+            "title": job.title,
+            "description": job.description,
+            "department": job.department,
+            "location": job.location,
+            "remote_allowed": job.remote_allowed,
+            "job_type": job.job_type.value,
+            "experience_level": job.experience_level.value,
+            "salary_range": salary_range,
+            "salary_min": job.salary_min,
+            "salary_max": job.salary_max,
+            "currency": job.currency,
+            "status": job.status.value,
+            "is_urgent": job.is_urgent,
+            "is_active": job.is_active,
+            "applications_count": job.applications_count,
+            "max_applications": job.max_applications,
+            "auto_match_enabled": job.auto_match_enabled,
+            "minimum_match_score": job.minimum_match_score,
+            "created_at": job.created_at.isoformat(),
+            "updated_at": job.updated_at.isoformat(),
+            "expires_at": job.expires_at.isoformat() if job.expires_at else None,
+            "required_skills": job.required_skills or [],
+            "preferred_skills": job.preferred_skills or [],
+            "required_education": job.required_education,
+            "required_experience": job.required_experience,
+            "communication_requirements": job.communication_requirements,
+            "matching_weights": job.matching_weights,
+            "company_name": company_name,
+            "application_status": existing_application.status.value if existing_application else None,
+            "applied_at": existing_application.applied_at.isoformat() if existing_application else None,
+            "match_analysis": match_analysis
+        }
+
+        return job_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get job details: {str(e)}"
+        )
+
+

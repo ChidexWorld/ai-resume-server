@@ -124,7 +124,6 @@ class VoiceAnalysisResponse(BaseModel):
 
 class ApplicationCreate(BaseModel):
     """Schema for creating job applications."""
-    job_id: int
     resume_id: Optional[int] = None
     voice_analysis_id: Optional[int] = None
     cover_letter: Optional[str] = None
@@ -149,20 +148,19 @@ class ApplicationResponse(BaseModel):
     """Schema for job application data in responses."""
     id: int
     employee_id: int
-    job_id: int
+    job_posting_id: int
+    resume_id: Optional[int] = None
+    voice_analysis_id: Optional[int] = None
+    cover_letter: Optional[str] = None
     status: str
-    cover_letter: Optional[str]
-    expected_salary: Optional[int]
-    expected_salary_formatted: Optional[str]
-    availability_date: Optional[str]
-    additional_notes: Optional[str]
+    match_score: Optional[int] = None
+    match_details: Optional[Dict[str, Any]] = None
+    recommendation: Optional[str] = None
     applied_at: str
-    updated_at: str
-    
-    # Related data
-    job: Optional[Dict[str, Any]]
-    employer: Optional[Dict[str, Any]]
-    
+    reviewed_at: Optional[str] = None
+    interview_scheduled_at: Optional[str] = None
+    notes: Optional[str] = None
+
     class Config:
         from_attributes = True
 

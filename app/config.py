@@ -50,15 +50,15 @@ class Settings(BaseSettings):
 
     # CORS settings - use Field to map environment variable
     cors_origins_str: str = Field(
-        default="http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://localhost:5173",
-        alias="cors_origins",
+        default="http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174",
+        alias="CORS_ORIGINS",
     )
 
     @property
     def cors_origins(self) -> List[str]:
         """Convert comma-separated CORS origins string to list."""
         if not self.cors_origins_str:
-            return ["http://localhost:5173"]
+            return ["http://localhost:5173", "http://localhost:3000"]
         return [origin.strip() for origin in self.cors_origins_str.split(',') if origin.strip()]
 
     @property

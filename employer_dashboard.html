@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employer Dashboard - AI Resume Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .auth-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 1rem;
+        }
+
+        .section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .jobs-list, .applications-list {
+            margin-top: 1rem;
+        }
+
+        .job-card, .application-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .job-card:hover, .application-card:hover {
+            border-color: #667eea;
+        }
+
+        .job-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .job-meta {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .job-description {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-paused {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-closed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-pending {
+            background: #cce5ff;
+            color: #0056b3;
+        }
+
+        .status-reviewed {
+            background: #e7f3ff;
+            color: #0066cc;
+        }
+
+        .status-accepted {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .match-score {
+            font-weight: bold;
+            padding: 0.5rem;
+            border-radius: 5px;
+            text-align: center;
+            margin: 0.5rem 0;
+        }
+
+        .match-high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .match-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .match-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .candidate-info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Employer Dashboard</h1>
+        <p>AI-Powered Resume Matching & Candidate Management</p>
+    </div>
+
+    <div class="container">
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <h2>Login to Access Dashboard</h2>
+            <div class="form-group">
+                <label for="loginEmail">Email:</label>
+                <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password:</label>
+                <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password">
+            </div>
+            <button onclick="login()" class="btn">Login</button>
+            <div id="authError" class="error" style="display: none;"></div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard" id="dashboardContent">
+            <!-- Dashboard Stats -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalJobs">0</div>
+                    <div class="stat-label">Total Jobs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeJobs">0</div>
+                    <div class="stat-label">Active Jobs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalApplications">0</div>
+                    <div class="stat-label">Total Applications</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingApplications">0</div>
+                    <div class="stat-label">Pending Review</div>
+                </div>
+            </div>
+
+            <!-- Job Management -->
+            <div class="section">
+                <h2>Job Management</h2>
+                <button onclick="showCreateJobModal()" class="btn">Create New Job</button>
+                <button onclick="loadJobs()" class="btn btn-secondary">Refresh Jobs</button>
+
+                <div id="jobsList" class="jobs-list">
+                    <div class="loading">Loading jobs...</div>
+                </div>
+            </div>
+
+            <!-- Applications Review -->
+            <div class="section">
+                <h2>Recent Applications</h2>
+                <button onclick="loadRecentApplications()" class="btn btn-secondary">Refresh Applications</button>
+
+                <div id="applicationsList" class="applications-list">
+                    <div class="loading">Loading applications...</div>
+                </div>
+            </div>
+
+            <!-- Candidate Search -->
+            <div class="section">
+                <h2>Candidate Search</h2>
+                <div class="form-group">
+                    <label for="searchSkills">Required Skills (comma-separated):</label>
+                    <input type="text" id="searchSkills" class="form-control" placeholder="e.g., Python, JavaScript, React">
+                </div>
+                <div class="form-group">
+                    <label for="searchExperience">Minimum Experience (years):</label>
+                    <input type="number" id="searchExperience" class="form-control" placeholder="0" min="0">
+                </div>
+                <button onclick="searchCandidates()" class="btn">Search Candidates</button>
+
+                <div id="candidatesList" class="candidates-list">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Job Modal -->
+    <div id="createJobModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('createJobModal')">&times;</span>
+            <h2>Create New Job Posting</h2>
+
+            <div class="form-group">
+                <label for="jobTitle">Job Title:</label>
+                <input type="text" id="jobTitle" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="jobDescription">Job Description:</label>
+                <textarea id="jobDescription" class="form-control" rows="4" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="jobLocation">Location:</label>
+                <input type="text" id="jobLocation" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="jobSalaryMin">Minimum Salary:</label>
+                <input type="number" id="jobSalaryMin" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="jobSalaryMax">Maximum Salary:</label>
+                <input type="number" id="jobSalaryMax" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="requiredSkills">Required Skills (comma-separated):</label>
+                <input type="text" id="requiredSkills" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="preferredSkills">Preferred Skills (comma-separated):</label>
+                <input type="text" id="preferredSkills" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="minExperience">Minimum Experience (years):</label>
+                <input type="number" id="minExperience" class="form-control" required min="0">
+            </div>
+
+            <button onclick="createJob()" class="btn">Create Job</button>
+            <button onclick="closeModal('createJobModal')" class="btn btn-secondary">Cancel</button>
+
+            <div id="createJobError" class="error" style="display: none;"></div>
+            <div id="createJobSuccess" class="success" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Application Details Modal -->
+    <div id="applicationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('applicationModal')">&times;</span>
+            <h2>Application Details</h2>
+            <div id="applicationDetails">
+                <div class="loading">Loading application details...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+        const API_BASE = window.location.origin; // Assumes dashboard is served from same domain
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            if (authToken) {
+                showDashboard();
+                loadDashboardData();
+            }
+        });
+
+        // Authentication functions
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showError('authError', 'Please enter both email and password');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    localStorage.setItem('authToken', authToken);
+                    showDashboard();
+                    loadDashboardData();
+                } else {
+                    const error = await response.json();
+                    showError('authError', error.detail || 'Login failed');
+                }
+            } catch (error) {
+                showError('authError', 'Network error. Please try again.');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('authToken');
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+        }
+
+        // API call helper
+        async function apiCall(endpoint, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            };
+
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers: defaultOptions.headers
+            });
+
+            if (response.status === 401) {
+                logout();
+                throw new Error('Authentication required');
+            }
+
+            return response;
+        }
+
+        // Dashboard data loading
+        async function loadDashboardData() {
+            await Promise.all([
+                loadDashboardStats(),
+                loadJobs(),
+                loadRecentApplications()
+            ]);
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const response = await apiCall('/employer/dashboard/stats');
+                const stats = await response.json();
+
+                document.getElementById('totalJobs').textContent = stats.total_jobs || 0;
+                document.getElementById('activeJobs').textContent = stats.active_jobs || 0;
+                document.getElementById('totalApplications').textContent = stats.total_applications || 0;
+                document.getElementById('pendingApplications').textContent = stats.pending_applications || 0;
+            } catch (error) {
+                console.error('Failed to load dashboard stats:', error);
+            }
+        }
+
+        async function loadJobs() {
+            try {
+                const response = await apiCall('/employer/jobs');
+                const jobs = await response.json();
+
+                const jobsList = document.getElementById('jobsList');
+
+                if (jobs.length === 0) {
+                    jobsList.innerHTML = '<p>No jobs posted yet. <a href="#" onclick="showCreateJobModal()">Create your first job posting</a></p>';
+                    return;
+                }
+
+                jobsList.innerHTML = jobs.map(job => `
+                    <div class="job-card">
+                        <div class="job-title">${job.title}</div>
+                        <div class="job-meta">
+                            <span class="status-badge status-${job.status.toLowerCase()}">${job.status}</span>
+                            • Posted: ${new Date(job.created_at).toLocaleDateString()}
+                            • Location: ${job.location}
+                        </div>
+                        <div class="job-description">${job.description.substring(0, 200)}...</div>
+                        <div>
+                            <button onclick="viewJobApplications(${job.id})" class="btn btn-secondary">View Applications</button>
+                            <button onclick="editJob(${job.id})" class="btn btn-secondary">Edit</button>
+                            <button onclick="autoScoreApplications(${job.id})" class="btn btn-success">Auto-Score Applications</button>
+                            <button onclick="getAIRecommendations(${job.id})" class="btn">AI Recommendations</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('jobsList').innerHTML = '<div class="error">Failed to load jobs</div>';
+            }
+        }
+
+        async function loadRecentApplications() {
+            try {
+                // Load applications for all jobs
+                const jobsResponse = await apiCall('/employer/jobs');
+                const jobs = await jobsResponse.json();
+
+                let allApplications = [];
+
+                for (const job of jobs.slice(0, 3)) { // Limit to first 3 jobs for performance
+                    try {
+                        const appResponse = await apiCall(`/employer/jobs/${job.id}/applications`);
+                        const applications = await appResponse.json();
+                        allApplications = allApplications.concat(
+                            applications.slice(0, 5).map(app => ({...app, job_title: job.title}))
+                        );
+                    } catch (error) {
+                        console.error(`Failed to load applications for job ${job.id}:`, error);
+                    }
+                }
+
+                const applicationsList = document.getElementById('applicationsList');
+
+                if (allApplications.length === 0) {
+                    applicationsList.innerHTML = '<p>No recent applications</p>';
+                    return;
+                }
+
+                applicationsList.innerHTML = allApplications.map(app => `
+                    <div class="application-card">
+                        <div class="candidate-info">
+                            <strong>${app.candidate_name || 'Anonymous Candidate'}</strong>
+                            <span class="status-badge status-${app.status.toLowerCase()}">${app.status}</span>
+                            <div>Job: ${app.job_title}</div>
+                            <div>Applied: ${new Date(app.applied_at).toLocaleDateString()}</div>
+                            ${app.ai_match_score ? `<div class="match-score match-${getMatchScoreClass(app.ai_match_score)}">Match Score: ${app.ai_match_score}%</div>` : ''}
+                        </div>
+                        <button onclick="viewApplication(${app.id})" class="btn btn-secondary">View Details</button>
+                        <button onclick="updateApplicationStatus(${app.id}, 'REVIEWED')" class="btn">Mark Reviewed</button>
+                        <button onclick="updateApplicationStatus(${app.id}, 'ACCEPTED')" class="btn btn-success">Accept</button>
+                        <button onclick="updateApplicationStatus(${app.id}, 'REJECTED')" class="btn btn-danger">Reject</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('applicationsList').innerHTML = '<div class="error">Failed to load applications</div>';
+            }
+        }
+
+        // Job management functions
+        function showCreateJobModal() {
+            document.getElementById('createJobModal').style.display = 'block';
+        }
+
+        async function createJob() {
+            const jobData = {
+                title: document.getElementById('jobTitle').value,
+                description: document.getElementById('jobDescription').value,
+                location: document.getElementById('jobLocation').value,
+                salary_min: parseInt(document.getElementById('jobSalaryMin').value),
+                salary_max: parseInt(document.getElementById('jobSalaryMax').value),
+                required_skills: document.getElementById('requiredSkills').value.split(',').map(s => s.trim()),
+                preferred_skills: document.getElementById('preferredSkills').value.split(',').map(s => s.trim()).filter(s => s),
+                min_experience_years: parseInt(document.getElementById('minExperience').value),
+                status: 'ACTIVE'
+            };
+
+            try {
+                const response = await apiCall('/employer/jobs', {
+                    method: 'POST',
+                    body: JSON.stringify(jobData)
+                });
+
+                if (response.ok) {
+                    showSuccess('createJobSuccess', 'Job created successfully!');
+                    closeModal('createJobModal');
+                    loadJobs();
+                    loadDashboardStats();
+                } else {
+                    const error = await response.json();
+                    showError('createJobError', error.detail || 'Failed to create job');
+                }
+            } catch (error) {
+                showError('createJobError', 'Network error. Please try again.');
+            }
+        }
+
+        async function autoScoreApplications(jobId) {
+            try {
+                const response = await apiCall(`/employer/jobs/${jobId}/auto-score-applications`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Successfully scored ${result.scored_count} applications`);
+                    loadRecentApplications();
+                } else {
+                    alert('Failed to auto-score applications');
+                }
+            } catch (error) {
+                alert('Error auto-scoring applications');
+            }
+        }
+
+        async function getAIRecommendations(jobId) {
+            try {
+                const response = await apiCall(`/employer/jobs/${jobId}/ai-recommendations`);
+                const recommendations = await response.json();
+
+                // Display recommendations in a modal or new section
+                showRecommendations(recommendations);
+            } catch (error) {
+                alert('Failed to get AI recommendations');
+            }
+        }
+
+        // Application management
+        async function viewJobApplications(jobId) {
+            try {
+                const response = await apiCall(`/employer/jobs/${jobId}/applications`);
+                const applications = await response.json();
+
+                // Display applications for this specific job
+                const applicationsList = document.getElementById('applicationsList');
+                applicationsList.innerHTML = applications.map(app => `
+                    <div class="application-card">
+                        <div class="candidate-info">
+                            <strong>${app.candidate_name || 'Anonymous Candidate'}</strong>
+                            <span class="status-badge status-${app.status.toLowerCase()}">${app.status}</span>
+                            <div>Applied: ${new Date(app.applied_at).toLocaleDateString()}</div>
+                            ${app.ai_match_score ? `<div class="match-score match-${getMatchScoreClass(app.ai_match_score)}">Match Score: ${app.ai_match_score}%</div>` : ''}
+                        </div>
+                        <button onclick="viewApplication(${app.id})" class="btn btn-secondary">View Details</button>
+                        <button onclick="updateApplicationStatus(${app.id}, 'REVIEWED')" class="btn">Mark Reviewed</button>
+                        <button onclick="updateApplicationStatus(${app.id}, 'ACCEPTED')" class="btn btn-success">Accept</button>
+                        <button onclick="updateApplicationStatus(${app.id}, 'REJECTED')" class="btn btn-danger">Reject</button>
+                    </div>
+                `).join('');
+
+                // Scroll to applications section
+                document.getElementById('applicationsList').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                alert('Failed to load job applications');
+            }
+        }
+
+        async function updateApplicationStatus(applicationId, status) {
+            try {
+                const response = await apiCall(`/employer/applications/${applicationId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status: status })
+                });
+
+                if (response.ok) {
+                    loadRecentApplications();
+                    loadDashboardStats();
+                } else {
+                    alert('Failed to update application status');
+                }
+            } catch (error) {
+                alert('Error updating application status');
+            }
+        }
+
+        // Candidate search
+        async function searchCandidates() {
+            const skills = document.getElementById('searchSkills').value;
+            const experience = document.getElementById('searchExperience').value;
+
+            if (!skills) {
+                alert('Please enter required skills');
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    required_skills: skills,
+                    min_experience_years: experience || 0
+                });
+
+                const response = await apiCall(`/employer/candidates/search?${params}`);
+                const candidates = await response.json();
+
+                const candidatesList = document.getElementById('candidatesList');
+
+                if (candidates.length === 0) {
+                    candidatesList.innerHTML = '<p>No candidates found matching your criteria</p>';
+                    return;
+                }
+
+                candidatesList.innerHTML = `
+                    <h3>Found ${candidates.length} candidates:</h3>
+                    ${candidates.map(candidate => `
+                        <div class="candidate-info">
+                            <strong>${candidate.name || 'Anonymous Candidate'}</strong>
+                            <div class="match-score match-${getMatchScoreClass(candidate.match_score)}">
+                                Match Score: ${candidate.match_score}%
+                            </div>
+                            <div>Experience: ${candidate.experience_years} years</div>
+                            <div>Skills: ${candidate.skills.slice(0, 5).join(', ')}</div>
+                            <div>Industry: ${candidate.industry}</div>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                document.getElementById('candidatesList').innerHTML = '<div class="error">Failed to search candidates</div>';
+            }
+        }
+
+        // Utility functions
+        function getMatchScoreClass(score) {
+            if (score >= 80) return 'high';
+            if (score >= 60) return 'medium';
+            return 'low';
+        }
+
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 3000);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Modal click outside to close
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Add logout button to header
+        document.querySelector('.header').innerHTML += `
+            <div style="position: absolute; top: 1rem; right: 2rem;">
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            </div>
+        `;
+    </script>
+</body>
+</html>

@@ -189,7 +189,7 @@ async def delete_job_posting(
     current_user: User = Depends(verify_employer_user),
     db: Session = Depends(get_db)
 ):
-    """Delete (close) a job posting."""
+    """Delete a job posting."""
     try:
         job = db.query(JobPosting).filter(
             JobPosting.id == job_id,
@@ -202,18 +202,17 @@ async def delete_job_posting(
                 detail="Job posting not found"
             )
         
-        # Close the job instead of deleting
-        job.status = JobStatus.CLOSED
-        job.updated_at = datetime.utcnow()
+        # Actually delete the job posting
+        db.delete(job)
         db.commit()
-        
-        return {"message": "Job posting closed successfully"}
+
+        return {"message": "Job posting deleted successfully"}
         
     except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to close job posting: {str(e)}"
+            detail=f"Failed to delete job posting: {str(e)}"
         )
 
 
