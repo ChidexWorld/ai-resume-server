@@ -20,6 +20,7 @@ email-validator==2.1.0
 
 # AI/ML dependencies (tested versions)
 openai-whisper==20231117
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.2.0+cpu
 transformers==4.35.0
 sentence-transformers==2.2.2
