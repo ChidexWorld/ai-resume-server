@@ -10,6 +10,12 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
+# Set NLTK data path before any NLTK imports
+import nltk
+nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
+if os.path.exists(nltk_data_dir):
+    nltk.data.path.append(nltk_data_dir)
+
 from app.config import settings
 from app.database import get_db, create_tables
 
