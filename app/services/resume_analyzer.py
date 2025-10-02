@@ -6,6 +6,17 @@ Enhanced with PyResParser and dataset_manager for better accuracy.
 import re
 import os
 from typing import Dict, Optional
+
+# CRITICAL: Set up NLTK paths BEFORE any pyresparser import
+import sys
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+
+try:
+    import setup_nltk  # This sets up NLTK data paths
+except ImportError:
+    pass
+
 from .name_extractor import name_extractor
 from .dataset_manager import dataset_manager
 
