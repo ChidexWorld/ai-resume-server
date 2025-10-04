@@ -5,6 +5,7 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Foreign
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
+import json as json_module
 from app.database import Base
 
 
@@ -150,6 +151,17 @@ class JobPosting(Base):
         """Increment the applications count."""
         self.applications_count += 1
     
+    def _parse_json_field(self, field_value):
+        """Safely parse JSON field that might be a string or already parsed."""
+        if field_value is None:
+            return None
+        if isinstance(field_value, str):
+            try:
+                return json_module.loads(field_value)
+            except (json_module.JSONDecodeError, ValueError):
+                return field_value
+        return field_value
+
     def to_dict(self, include_requirements: bool = True) -> dict:
         """Convert job posting to dictionary."""
         job_data = {
@@ -175,17 +187,17 @@ class JobPosting(Base):
             "updated_at": self.updated_at.isoformat(),
             "expires_at": self.expires_at.isoformat() if self.expires_at else None
         }
-        
+
         if include_requirements:
             job_data.update({
-                "required_skills": self.required_skills,
-                "preferred_skills": self.preferred_skills,
-                "required_education": self.required_education,
-                "required_experience": self.required_experience,
-                "communication_requirements": self.communication_requirements,
-                "matching_weights": self.matching_weights
+                "required_skills": self._parse_json_field(self.required_skills),
+                "preferred_skills": self._parse_json_field(self.preferred_skills),
+                "required_education": self._parse_json_field(self.required_education),
+                "required_experience": self._parse_json_field(self.required_experience),
+                "communication_requirements": self._parse_json_field(self.communication_requirements),
+                "matching_weights": self._parse_json_field(self.matching_weights)
             })
-        
+
         return job_data
     
     def __repr__(self):

@@ -249,13 +249,13 @@ class JobPostingCreate(BaseModel):
 
     # Requirements
     required_skills: List[str]
-    preferred_skills: Optional[List[str]] = None
-    required_experience: Optional[Dict[str, Any]] = None
-    required_education: Optional[Dict[str, Any]] = None
+    preferred_skills: Optional[List[str]] = []
+    required_experience: Dict[str, Any] = {}
+    required_education: Dict[str, Any] = {}
 
     # Matching criteria
-    communication_requirements: Optional[Dict[str, Any]] = None
-    matching_weights: Optional[Dict[str, Any]] = None
+    communication_requirements: Dict[str, Any] = {}
+    matching_weights: Dict[str, Any] = {}
     minimum_match_score: int = 70
 
     # Additional settings
@@ -263,18 +263,58 @@ class JobPostingCreate(BaseModel):
     max_applications: Optional[int] = None
     auto_match_enabled: bool = True
     expires_at: Optional[datetime] = None
-    
+
     @validator('title')
     def validate_title(cls, v):
         if len(v.strip()) < 3:
             raise ValueError('Job title must be at least 3 characters long')
         return v.strip()
-    
+
     @validator('description')
     def validate_description(cls, v):
         if len(v.strip()) < 50:
             raise ValueError('Job description must be at least 50 characters long')
         return v.strip()
+
+    @validator('required_skills')
+    def validate_required_skills(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError('At least one required skill must be provided')
+        return v
+
+    @validator('salary_max')
+    def validate_salary_range(cls, v, values):
+        salary_min = values.get('salary_min')
+        if salary_min is not None and v is not None:
+            if v < salary_min:
+                raise ValueError(f'salary_max ({v}) must be greater than or equal to salary_min ({salary_min})')
+        return v
+
+    @validator('minimum_match_score')
+    def validate_minimum_match_score(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError('minimum_match_score must be between 0 and 100')
+        return v
+
+    @validator('required_experience', 'required_education', 'communication_requirements', 'matching_weights', pre=True)
+    def validate_dict_fields(cls, v):
+        if v is None:
+            return {}
+        if isinstance(v, str):
+            raise ValueError('This field must be a JSON object (dict), not a string. Send {} for empty object.')
+        if not isinstance(v, dict):
+            raise ValueError('This field must be a JSON object (dict)')
+        return v
+
+    @validator('preferred_skills', pre=True)
+    def validate_list_fields(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, str):
+            raise ValueError('This field must be a JSON array (list), not a string. Send [] for empty array.')
+        if not isinstance(v, list):
+            raise ValueError('This field must be a JSON array (list)')
+        return v
 
 
 class JobPostingUpdate(BaseModel):
@@ -304,26 +344,29 @@ class JobPostingResponse(BaseModel):
     department: Optional[str]
     location: str
     remote_allowed: bool
-    job_type: JobType
-    experience_level: ExperienceLevel
-    salary_min: Optional[int]
-    salary_max: Optional[int]
-    benefits: Optional[str]
+    job_type: str
+    experience_level: str
+    salary_range: Optional[str] = None
+    currency: str
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
     required_skills: List[str]
-    preferred_skills: Optional[List[str]]
-    required_experience: Optional[Dict[str, Any]]
-    required_education: Optional[Dict[str, Any]]
-    communication_requirements: Optional[Dict[str, Any]]
+    preferred_skills: List[str] = []
+    required_experience: Dict[str, Any] = {}
+    required_education: Dict[str, Any] = {}
+    communication_requirements: Dict[str, Any] = {}
+    matching_weights: Dict[str, Any] = {}
     minimum_match_score: int
-    status: JobStatus
+    status: str
+    is_urgent: bool
+    is_active: bool
     applications_count: int
-    matches_count: int
+    max_applications: Optional[int] = None
+    auto_match_enabled: bool
     created_at: str
     updated_at: str
-    
-    # Related data
-    employer: Optional[Dict[str, Any]]
-    
+    expires_at: Optional[str] = None
+
     class Config:
         from_attributes = True
 

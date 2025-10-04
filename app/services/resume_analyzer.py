@@ -348,18 +348,18 @@ class ResumeAnalyzer:
         total_exp = self._calculate_total_experience(experience_data)
 
         # Check for senior/leadership indicators in job titles
-        experience_text = " ".join(str(exp) for exp in experience_data).lower()
+        experience_text = " ".join(str(exp) for exp in experience_data).lower() if experience_data else ""
 
         senior_keywords = ['senior', 'lead', 'principal', 'architect', 'director', 'manager', 'head', 'chief']
         executive_keywords = ['ceo', 'cto', 'cfo', 'vp', 'vice president', 'president', 'founder', 'co-founder']
-        entry_keywords = ['intern', 'trainee', 'graduate', 'junior', 'assistant', 'entry']
+        entry_keywords = ['intern', 'trainee', 'graduate', 'junior', 'assistant', 'entry', 'fresher']
 
         # Override based on job titles if explicit
         if any(keyword in experience_text for keyword in executive_keywords):
             return "executive"
-        elif any(keyword in experience_text for keyword in senior_keywords):
+        elif any(keyword in experience_text for keyword in senior_keywords) and total_exp >= 5:
             return "senior"
-        elif any(keyword in experience_text for keyword in entry_keywords) and total_exp < 3:
+        elif any(keyword in experience_text for keyword in entry_keywords):
             return "entry"
 
         # Fallback to experience-based calculation
@@ -375,109 +375,189 @@ class ResumeAnalyzer:
             return "executive"
 
     def _calculate_total_experience(self, experience_data: list) -> int:
-        """Calculate total years of experience with enhanced parsing and fallback methods."""
+        """
+        Calculate total years of experience using a priority-based approach.
+
+        Priority Order:
+        1. Explicit years mentioned (most reliable)
+        2. Date range calculations (sum of all jobs)
+        3. Graduation year inference (fallback)
+        """
         from datetime import datetime
         current_year = datetime.now().year
-        total_years = 0
 
-        # If experience_data is empty or None, try to infer from context
+        # If experience_data is empty or None, return 0 (entry level)
         if not experience_data:
             return 0
 
+        # Convert experience_data to a single text for easier processing
+        full_text = " ".join(str(exp) for exp in experience_data if exp)
+
+        # PRIORITY 1: Look for explicit total experience mentions
+        explicit_years = self._extract_explicit_years(full_text)
+        if explicit_years > 0:
+            return min(explicit_years, 50)
+
+        # PRIORITY 2: Calculate from date ranges
+        date_based_years = self._calculate_from_date_ranges(experience_data, current_year)
+        if date_based_years > 0:
+            return min(date_based_years, 50)
+
+        # PRIORITY 3: Infer from graduation year
+        inferred_years = self._infer_from_graduation(full_text, current_year)
+        if inferred_years > 0:
+            return min(inferred_years, 50)
+
+        # Return 0 if no experience found (entry level / fresh graduate)
+        return 0
+
+    def _extract_explicit_years(self, text: str) -> int:
+        """Extract explicitly stated years of experience."""
+        max_years = 0
+        text_lower = text.lower()
+
+        # Patterns for explicit experience mentions (most comprehensive)
+        patterns = [
+            r'(\d+)\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|exp|tenure)',  # "5 years of experience" or "5+ years"
+            r'(?:with|over|about|around|nearly)\s+(\d+)\+?\s*(?:years?|yrs?)',  # "with 5+ years"
+            r'(\d+)\+?\s*(?:years?|yrs?)\s+(?:in|as|working)',  # "5+ years in"
+            r'(?:experience|exp).*?(\d+)\+?\s*(?:years?|yrs?)',  # "experience: 5 years"
+            r'(\d+)\+?\s*(?:years?|yrs?)[\s\'](?:of\s+)?(?:experience|exp)',  # "5+ years' experience"
+        ]
+
+        # Word to number mapping
+        word_to_num = {
+            'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+            'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+            'eleven': 11, 'twelve': 12, 'fifteen': 15, 'twenty': 20
+        }
+
+        # Check numeric patterns
+        for pattern in patterns:
+            matches = re.findall(pattern, text_lower)
+            for match in matches:
+                try:
+                    years = int(match.replace('+', '').strip())  # Remove + sign before conversion
+                    if 1 <= years <= 50:
+                        max_years = max(max_years, years)
+                except ValueError:
+                    pass
+
+        # Check word number patterns
+        word_pattern = r'(' + '|'.join(word_to_num.keys()) + r')\s+(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)'
+        word_matches = re.findall(word_pattern, text_lower)
+        for match in word_matches:
+            if match in word_to_num:
+                max_years = max(max_years, word_to_num[match])
+
+        return max_years
+
+    def _calculate_from_date_ranges(self, experience_data: list, current_year: int) -> int:
+        """Calculate total experience from job date ranges."""
+        from datetime import datetime
+        total_months = 0  # Track in months for better accuracy
+
+        # Date range patterns
+        date_patterns = [
+            r'(\w+\s+\d{4})\s*[—–-]\s*(\w+\s+\d{4}|present|current)',  # January 2021 — July 2022
+            r'(\d{1,2}\/\d{4})\s*[—–-]\s*(\d{1,2}\/\d{4}|present|current)',  # 01/2021 — 05/2023
+            r'(\d{4})\s*[—–-]\s*(\d{4}|present|current)',  # 2020 — 2023
+            r'(\d{4})\s+(?:to|-)\s+(\d{4}|present|current)',  # 2020 to 2023
+        ]
+
+        month_map = {
+            'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
+            'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6,
+            'july': 7, 'jul': 7, 'august': 8, 'aug': 8, 'september': 9, 'sep': 9, 'sept': 9,
+            'october': 10, 'oct': 10, 'november': 11, 'nov': 11, 'december': 12, 'dec': 12
+        }
+
         for exp in experience_data:
             exp_text = str(exp) if exp else ""
-            exp_lower = exp_text.lower()
-
-            # Method 1: Look for explicit years mentions with multiple patterns
-            years_patterns = [
-                r'(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp|tenure)',
-                r'(\d+)\s*(?:years?|yrs?)\s*(?:working|in|at|with)',
-                r'(?:over|more than|about)\s*(\d+)\+?\s*(?:years?|yrs?)',
-                r'(\d{1,2})\s*(?:years?|yrs?)\s*(?:experience|exp)',
-                r'(\d+)\+\s*(?:years?|yrs?)',
-            ]
-
-            for pattern in years_patterns:
-                years_match = re.search(pattern, exp_lower)
-                if years_match:
-                    years = int(years_match.group(1))
-                    if 1 <= years <= 50:  # Reasonable range
-                        total_years = max(total_years, years)
-
-            # Method 2: Calculate from date ranges with multiple formats
-            date_patterns = [
-                r'(\d{4})\s*[—–-]\s*(\d{4}|present|current)',  # 2020 — 2023
-                r'(\w+\s+\d{4})\s*[—–-]\s*(\w+\s+\d{4}|present|current)',  # January 2021 — July 2022
-                r'(\d{1,2}\/\d{4})\s*[—–-]\s*(\d{1,2}\/\d{4}|present|current)',  # 01/2021 — 05/2023
-                r'(\d{4})\s*to\s*(\d{4}|present|current)',  # 2020 to 2023
-                r'from\s+(\d{4})\s*to\s*(\d{4}|present|current)',  # from 2020 to 2023
-                r'(\d{4})\s*-\s*(\d{4}|present|current)',  # 2020-2023
-            ]
 
             for pattern in date_patterns:
-                date_match = re.search(pattern, exp_text, re.IGNORECASE)
-                if date_match:
-                    start_str, end_str = date_match.groups()
-                    try:
-                        # Extract start year
-                        start_year_match = re.search(r'\d{4}', start_str)
-                        if not start_year_match:
-                            continue
-                        start_year = int(start_year_match.group())
+                match = re.search(pattern, exp_text, re.IGNORECASE)
+                if match:
+                    start_str, end_str = match.groups()
 
-                        # Extract end year
+                    try:
+                        # Extract start date
+                        start_year = None
+                        start_month = 1  # Default to January
+
+                        # Check if it's month + year format
+                        month_year_match = re.search(r'(\w+)\s+(\d{4})', start_str)
+                        if month_year_match:
+                            month_name = month_year_match.group(1).lower()
+                            start_year = int(month_year_match.group(2))
+                            start_month = month_map.get(month_name, 1)
+                        else:
+                            # Just year format
+                            year_match = re.search(r'\d{4}', start_str)
+                            if year_match:
+                                start_year = int(year_match.group())
+
+                        if not start_year:
+                            continue
+
+                        # Extract end date
+                        end_year = None
+                        end_month = 12  # Default to December
+
                         if any(word in end_str.lower() for word in ['present', 'current', 'now']):
                             end_year = current_year
+                            end_month = datetime.now().month
                         else:
-                            end_year_match = re.search(r'\d{4}', end_str)
-                            if not end_year_match:
-                                continue
-                            end_year = int(end_year_match.group())
+                            month_year_match = re.search(r'(\w+)\s+(\d{4})', end_str)
+                            if month_year_match:
+                                month_name = month_year_match.group(1).lower()
+                                end_year = int(month_year_match.group(2))
+                                end_month = month_map.get(month_name, 12)
+                            else:
+                                year_match = re.search(r'\d{4}', end_str)
+                                if year_match:
+                                    end_year = int(year_match.group())
 
-                        # Calculate years difference
-                        if start_year > 1970 and start_year <= current_year:  # Reasonable year range
-                            job_years = max(0, end_year - start_year)
-                            if 0 <= job_years <= 15:  # Reasonable job duration
-                                total_years += job_years
+                        if not end_year:
+                            continue
+
+                        # Calculate duration in months
+                        if 1970 <= start_year <= current_year:
+                            months = (end_year - start_year) * 12 + (end_month - start_month)
+                            # Any job over 1 month counts
+                            if months >= 1 and months <= 240:  # Max 20 years
+                                total_months += months
+                                break  # Found dates for this job, move to next
                     except (ValueError, AttributeError):
                         continue
 
-            # Method 3: Look for tenure indicators
-            tenure_indicators = [
-                r'since\s+(\d{4})',
-                r'(\d+)\s*(?:months?|mos?)\s*(?:experience|exp)',
-                r'started\s+in\s+(\d{4})',
-                r'joined\s+in\s+(\d{4})',
-            ]
+        # Convert months to years (round up if >= 6 months)
+        total_years = total_months // 12
+        if total_months % 12 >= 6:
+            total_years += 1
 
-            for pattern in tenure_indicators:
-                match = re.search(pattern, exp_lower)
-                if match:
-                    value = int(match.group(1))
-                    if 'months?' in pattern or 'mos?' in pattern:
-                        years = max(1, value // 12)  # Convert months to years, minimum 1
-                    elif 'since' in pattern or 'started' in pattern or 'joined' in pattern:
-                        years = current_year - value
-                    else:
-                        years = value
+        return total_years
 
-                    if 1 <= years <= 50:
-                        total_years = max(total_years, years)
+    def _infer_from_graduation(self, text: str, current_year: int) -> int:
+        """Infer experience from graduation year."""
+        graduation_patterns = [
+            r'graduated.*?(\d{4})',
+            r'(?:bachelor|master|b\.s\.|m\.s\.|phd).*?(\d{4})',
+            r'degree.*?(\d{4})',
+        ]
 
-        # If still no experience calculated, use fallback heuristics
-        if total_years == 0:
-            # Look for graduation years and infer experience
-            graduation_pattern = r'(?:graduated|degree|bachelor|master|phd).*?(\d{4})'
-            for exp in experience_data:
-                grad_match = re.search(graduation_pattern, str(exp).lower())
-                if grad_match:
-                    grad_year = int(grad_match.group(1))
-                    if 1990 <= grad_year <= current_year - 1:  # Reasonable graduation year
-                        inferred_experience = current_year - grad_year - 1  # Subtract 1 for graduation year
-                        if inferred_experience > 0:
-                            total_years = max(total_years, min(inferred_experience, 30))
+        for pattern in graduation_patterns:
+            matches = re.findall(pattern, text.lower())
+            if matches:
+                grad_year = int(matches[0])
+                if 1990 <= grad_year <= current_year:
+                    # Assume they started working after graduation
+                    inferred_exp = current_year - grad_year
+                    # Cap reasonable inference (not more than 30 years from graduation)
+                    if 0 < inferred_exp <= 30:
+                        return inferred_exp
 
-        return min(total_years, 50)  # Cap at reasonable maximum
+        return 0
 
     def _extract_job_titles(self, text: str) -> list:
         """Extract job titles from resume."""
@@ -1197,53 +1277,57 @@ class ResumeAnalyzer:
             return 'general'
 
     def _calculate_global_experience_years(self, text: str, job_positions: list) -> int:
-        """Calculate total years from all sources - job dates, profile mentions, and experience descriptions."""
-        total_years = 0
+        """
+        Calculate total years from all sources using priority-based approach.
 
-        # Method 1: Calculate from job position dates
+        Priority Order:
+        1. Explicit years in text (most reliable)
+        2. Sum of job position dates
+        3. Graduation year inference (fallback)
+        """
+        from datetime import datetime
+        current_year = datetime.now().year
+
+        # PRIORITY 1: Extract explicit years from text
+        explicit_years = self._extract_explicit_years(text)
+        if explicit_years > 0:
+            return min(explicit_years, 50)
+
+        # PRIORITY 2: Calculate from job position dates
         job_years = 0
         for position in job_positions:
             if position['dates']:
                 dates_str = position['dates']
                 try:
-                    # Extract years from date range
                     years_match = re.findall(r'\d{4}', dates_str)
-                    if len(years_match) >= 2:
+                    if len(years_match) >= 1:
                         start_year = int(years_match[0])
-                        end_year = int(years_match[1]) if 'present' not in dates_str.lower() and 'current' not in dates_str.lower() else 2024
-                        position_years = max(0, end_year - start_year)
-                        if position_years <= 15:  # Reasonable job duration
-                            job_years += position_years
+
+                        # Determine end year
+                        if 'present' in dates_str.lower() or 'current' in dates_str.lower():
+                            end_year = current_year
+                        elif len(years_match) >= 2:
+                            end_year = int(years_match[1])
+                        else:
+                            end_year = start_year + 1
+
+                        duration = max(0, end_year - start_year)
+                        if duration == 0 and start_year == current_year:
+                            duration = 1  # Current year counts as 1
+                        if duration <= 20:
+                            job_years += duration
                 except:
                     pass
 
-        # Method 2: Extract from profile/summary text
-        profile_years = 0
-        experience_patterns = [
-            r'(\w+)\s+years?\'\s*(?:experience|tenure)',  # "five years' tenure"
-            r'(?:with|over|about)\s+(\w+)\s+years?',       # "with five years"
-            r'(\d+)\s+years?\s*(?:of\s*)?(?:experience|exp)',  # "5 years experience"
-        ]
+        if job_years > 0:
+            return min(job_years, 50)
 
-        # Convert word numbers to digits
-        word_to_num = {
-            'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-            'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
-            'eleven': 11, 'twelve': 12, 'fifteen': 15, 'twenty': 20
-        }
+        # PRIORITY 3: Infer from graduation year
+        inferred_years = self._infer_from_graduation(text, current_year)
+        if inferred_years > 0:
+            return min(inferred_years, 50)
 
-        for pattern in experience_patterns:
-            matches = re.findall(pattern, text.lower())
-            for match in matches:
-                if match in word_to_num:
-                    profile_years = max(profile_years, word_to_num[match])
-                elif match.isdigit():
-                    profile_years = max(profile_years, int(match))
-
-        # Use the higher value between calculated job years and profile years
-        total_years = max(job_years, profile_years)
-
-        return min(total_years, 50)  # Cap at reasonable maximum
+        return 0
 
     def _extract_experience_summary(self, text: str) -> str:
         """Extract comprehensive experience summary from profile."""

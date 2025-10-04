@@ -86,9 +86,19 @@ async def create_job_posting(
         db.add(job_posting)
         db.commit()
         db.refresh(job_posting)
-        
-        return JobPostingResponse.model_validate(job_posting.to_dict())
-        
+
+        try:
+            job_dict = job_posting.to_dict()
+            return JobPostingResponse.model_validate(job_dict)
+        except Exception as dict_error:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to convert job posting to dict: {str(dict_error)}"
+            )
+
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(

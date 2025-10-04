@@ -1,0 +1,142 @@
+{
+  "minimal_example": {
+    "title": "Senior Software Engineer",
+    "description": "We are seeking an experienced software engineer to join our team and work on cutting-edge technology projects.",
+    "location": "San Francisco, CA",
+    "job_type": "full_time",
+    "experience_level": "senior",
+    "required_skills": ["Python", "FastAPI", "PostgreSQL"]
+  },
+
+  "complete_example_with_defaults": {
+    "title": "Frontend Developer",
+    "description": "Join our dynamic team to build amazing user interfaces using modern web technologies and frameworks.",
+    "department": "Engineering",
+    "location": "Remote",
+    "remote_allowed": true,
+    "job_type": "full_time",
+    "experience_level": "mid",
+    "salary_min": 80000,
+    "salary_max": 120000,
+    "currency": "USD",
+    "required_skills": ["JavaScript", "React", "TypeScript"],
+    "preferred_skills": ["Next.js", "TailwindCSS"],
+    "required_experience": {},
+    "required_education": {},
+    "communication_requirements": {},
+    "matching_weights": {},
+    "minimum_match_score": 70,
+    "is_urgent": false,
+    "max_applications": 50,
+    "auto_match_enabled": true
+  },
+
+  "complete_example_with_details": {
+    "title": "Full Stack Developer",
+    "description": "We're looking for a talented full-stack developer to build scalable web applications using modern technologies and best practices.",
+    "department": "Product Development",
+    "location": "New York, NY",
+    "remote_allowed": true,
+    "job_type": "full_time",
+    "experience_level": "senior",
+    "salary_min": 100000,
+    "salary_max": 150000,
+    "currency": "USD",
+    "required_skills": ["Python", "JavaScript", "React", "FastAPI", "PostgreSQL"],
+    "preferred_skills": ["Docker", "Kubernetes", "AWS", "Redis"],
+    "required_experience": {
+      "minimum_years": 5,
+      "preferred_areas": ["Web Development", "API Design", "Database Design"],
+      "leadership_experience": false
+    },
+    "required_education": {
+      "degree_required": true,
+      "minimum_degree": "Bachelor",
+      "preferred_fields": ["Computer Science", "Software Engineering"],
+      "certifications": ["AWS Certified Developer"]
+    },
+    "communication_requirements": {
+      "clarity_threshold": 70,
+      "fluency_threshold": 75,
+      "confidence_threshold": 65,
+      "vocabulary_threshold": 70,
+      "requires_voice_analysis": true
+    },
+    "matching_weights": {
+      "skills_weight": 0.4,
+      "experience_weight": 0.3,
+      "education_weight": 0.15,
+      "communication_weight": 0.15
+    },
+    "minimum_match_score": 75,
+    "is_urgent": true,
+    "max_applications": 100,
+    "auto_match_enabled": true,
+    "expires_at": "2025-11-01T23:59:59Z"
+  },
+
+  "entry_level_example": {
+    "title": "Junior Data Analyst",
+    "description": "Perfect opportunity for recent graduates to start their career in data analytics and business intelligence.",
+    "department": "Analytics",
+    "location": "Boston, MA",
+    "remote_allowed": false,
+    "job_type": "full_time",
+    "experience_level": "entry",
+    "salary_min": 50000,
+    "salary_max": 70000,
+    "currency": "USD",
+    "required_skills": ["SQL", "Excel", "Python"],
+    "preferred_skills": ["Tableau", "Power BI"],
+    "required_experience": {
+      "minimum_years": 0,
+      "internship_acceptable": true
+    },
+    "required_education": {
+      "degree_required": true,
+      "minimum_degree": "Bachelor",
+      "preferred_fields": ["Statistics", "Mathematics", "Computer Science", "Economics"]
+    },
+    "communication_requirements": {
+      "clarity_threshold": 60,
+      "requires_voice_analysis": false
+    },
+    "matching_weights": {
+      "skills_weight": 0.35,
+      "experience_weight": 0.15,
+      "education_weight": 0.35,
+      "communication_weight": 0.15
+    },
+    "minimum_match_score": 60,
+    "is_urgent": false,
+    "max_applications": 200,
+    "auto_match_enabled": true
+  },
+
+  "contract_example": {
+    "title": "DevOps Engineer (Contract)",
+    "description": "Short-term contract position to help migrate our infrastructure to cloud-native solutions and implement CI/CD pipelines.",
+    "department": "Infrastructure",
+    "location": "Remote",
+    "remote_allowed": true,
+    "job_type": "contract",
+    "experience_level": "senior",
+    "salary_min": 120000,
+    "salary_max": 160000,
+    "currency": "USD",
+    "required_skills": ["AWS", "Kubernetes", "Docker", "Terraform", "CI/CD"],
+    "preferred_skills": ["Ansible", "Prometheus", "Grafana", "EKS"],
+    "required_experience": {
+      "minimum_years": 4,
+      "preferred_areas": ["Cloud Infrastructure", "Container Orchestration", "Infrastructure as Code"]
+    },
+    "required_education": {},
+    "communication_requirements": {},
+    "matching_weights": {},
+    "minimum_match_score": 80,
+    "is_urgent": true,
+    "max_applications": 30,
+    "auto_match_enabled": true,
+    "expires_at": "2025-10-20T23:59:59Z"
+  }
+}
