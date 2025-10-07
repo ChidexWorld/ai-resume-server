@@ -48,6 +48,8 @@ class Application(Base):
     # Employer feedback
     employer_notes = Column(Text, nullable=True)
     interview_scheduled = Column(DateTime, nullable=True)
+    interview_type = Column(String(50), nullable=True)  # video, phone, in_person
+    interview_location = Column(String(500), nullable=True)  # meeting link, phone number, or physical location
     interview_feedback = Column(Text, nullable=True)
     
     # Timestamps
@@ -104,9 +106,11 @@ class Application(Base):
         self.ai_recommendation = recommendation
         self.updated_at = datetime.utcnow()
     
-    def schedule_interview(self, interview_date: datetime, notes: str = None):
+    def schedule_interview(self, interview_date: datetime, interview_type: str = None, interview_location: str = None, notes: str = None):
         """Schedule an interview."""
         self.interview_scheduled = interview_date
+        self.interview_type = interview_type
+        self.interview_location = interview_location
         self.update_status(ApplicationStatus.INTERVIEWED, notes)
     
     def add_interview_feedback(self, feedback: str):
@@ -148,7 +152,9 @@ class Application(Base):
             "updated_at": self.updated_at.isoformat(),
             "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
             "decision_at": self.decision_at.isoformat() if self.decision_at else None,
-            "interview_scheduled": self.interview_scheduled.isoformat() if self.interview_scheduled else None
+            "interview_scheduled": self.interview_scheduled.isoformat() if self.interview_scheduled else None,
+            "interview_type": self.interview_type,
+            "interview_location": self.interview_location
         }
         
         if include_details:

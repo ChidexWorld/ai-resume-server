@@ -42,7 +42,7 @@ async def generate_job_matches(
         )
     
     # Verify access (job owner or admin)
-    if current_user.user_type == UserType.EMPLOYER and job.employer_id != current_user.id:
+    if current_user.user_type == UserType.EMPLOYER.value and job.employer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this job posting"
@@ -99,7 +99,7 @@ async def get_employee_job_matches(
     db: Session = Depends(get_db)
 ):
     """Get job matches for the current employee."""
-    if current_user.user_type != UserType.EMPLOYEE:
+    if current_user.user_type != UserType.EMPLOYEE.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This endpoint is only accessible to employees"
@@ -158,7 +158,7 @@ async def calculate_job_match(
             )
         
         # Verify access
-        if current_user.user_type == UserType.EMPLOYEE and resume.employee_id != current_user.id:
+        if current_user.user_type == UserType.EMPLOYEE.value and resume.employee_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this resume"
@@ -219,12 +219,12 @@ async def dismiss_job_match(
             )
         
         # Verify access
-        if current_user.user_type == UserType.EMPLOYEE and match.employee_id != current_user.id:
+        if current_user.user_type == UserType.EMPLOYEE.value and match.employee_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this match"
             )
-        elif current_user.user_type == UserType.EMPLOYER:
+        elif current_user.user_type == UserType.EMPLOYER.value:
             job = db.query(JobPosting).filter(JobPosting.id == match.job_posting_id).first()
             if not job or job.employer_id != current_user.id:
                 raise HTTPException(
@@ -255,7 +255,7 @@ async def get_matching_statistics(
 ):
     """Get matching statistics for the current user."""
     try:
-        if current_user.user_type == UserType.EMPLOYEE:
+        if current_user.user_type == UserType.EMPLOYEE.value:
             # Employee stats
             total_matches = db.query(JobMatch).filter(
                 JobMatch.employee_id == current_user.id,
@@ -359,7 +359,7 @@ async def generate_bulk_matches(
                 
                 # Get candidates
                 resumes = db.query(Resume).join(User).filter(
-                    User.user_type == UserType.EMPLOYEE,
+                    User.user_type == UserType.EMPLOYEE.value,
                     User.is_active == True,
                     Resume.status == "analyzed",
                     Resume.is_active == True

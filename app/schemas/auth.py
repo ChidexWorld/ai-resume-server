@@ -34,7 +34,9 @@ class UserCreate(BaseModel):
     
     @validator('company_name')
     def validate_company_name(cls, v, values):
-        if values.get('user_type') == UserType.EMPLOYER and not v:
+        user_type = values.get('user_type')
+        # Handle both enum and string values
+        if (user_type == UserType.EMPLOYER or (isinstance(user_type, str) and user_type == UserType.EMPLOYER.value)) and not v:
             raise ValueError('Company name is required for employers')
         return v
 

@@ -12,12 +12,13 @@ class UserType(str, enum.Enum):
     """User type enumeration."""
     EMPLOYEE = "employee"
     EMPLOYER = "employer"
+    ADMIN = "admin"
 
 
 class User(Base):
     """
     User model for authentication and profile management.
-    Supports both employees and employers.
+    Supports employees, employers, and admins.
     """
     
     __tablename__ = "users"
@@ -35,7 +36,7 @@ class User(Base):
     phone = Column(String(20), nullable=True)
     
     # User type and status
-    user_type = Column(Enum(UserType), nullable=False)
+    user_type = Column(String(20), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     
@@ -65,12 +66,17 @@ class User(Base):
     @property
     def is_employee(self) -> bool:
         """Check if user is an employee."""
-        return self.user_type == UserType.EMPLOYEE
-    
+        return self.user_type == UserType.EMPLOYEE.value
+
     @property
     def is_employer(self) -> bool:
         """Check if user is an employer."""
-        return self.user_type == UserType.EMPLOYER
+        return self.user_type == UserType.EMPLOYER.value
+
+    @property
+    def is_admin(self) -> bool:
+        """Check if user is an admin."""
+        return self.user_type == UserType.ADMIN.value
     
     def to_dict(self, include_sensitive: bool = False) -> dict:
         """Convert user to dictionary."""
@@ -81,7 +87,7 @@ class User(Base):
             "last_name": self.last_name,
             "full_name": self.full_name,
             "phone": self.phone,
-            "user_type": self.user_type.value,
+            "user_type": self.user_type,
             "is_active": self.is_active,
             "is_verified": self.is_verified,
             "created_at": self.created_at.isoformat(),
@@ -102,4 +108,4 @@ class User(Base):
         return user_data
     
     def __repr__(self):
-        return f"<User {self.email} ({self.user_type.value})>"
+        return f"<User {self.email} ({self.user_type})>"

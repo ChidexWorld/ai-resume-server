@@ -18,9 +18,8 @@ router = APIRouter()
 
 def verify_admin_user(current_user: User = Depends(get_current_active_user)) -> User:
     """Verify that current user has admin privileges."""
-    # For now, we'll consider employers as having some admin capabilities
-    # In production, you might want a separate admin role
-    if current_user.user_type not in [UserType.EMPLOYER]:
+    # Only allow admin user type
+    if current_user.user_type != UserType.ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -38,8 +37,8 @@ async def get_system_statistics(
         # User statistics
         total_users = db.query(User).count()
         active_users = db.query(User).filter(User.is_active == True).count()
-        employees = db.query(User).filter(User.user_type == UserType.EMPLOYEE).count()
-        employers = db.query(User).filter(User.user_type == UserType.EMPLOYER).count()
+        employees = db.query(User).filter(User.user_type == UserType.EMPLOYEE.value).count()
+        employers = db.query(User).filter(User.user_type == UserType.EMPLOYER.value).count()
         
         # Job posting statistics
         total_jobs = db.query(JobPosting).count()
@@ -145,7 +144,7 @@ async def get_users_for_management(
         response_data = []
         for user in users:
             # Get user statistics
-            if user.user_type == UserType.EMPLOYEE:
+            if user.user_type == UserType.EMPLOYEE.value:
                 resume_count = db.query(Resume).filter(
                     Resume.employee_id == user.id,
                     Resume.is_active == True

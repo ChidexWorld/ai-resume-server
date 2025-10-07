@@ -24,7 +24,7 @@ router = APIRouter()
 
 def verify_employer_user(current_user: User = Depends(get_current_active_user)) -> User:
     """Verify that current user is an employer."""
-    if current_user.user_type != UserType.EMPLOYER:
+    if current_user.user_type != UserType.EMPLOYER.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This endpoint is only accessible to employers"
@@ -431,12 +431,19 @@ async def schedule_interview(
             )
         
         # Schedule interview
-        application.schedule_interview(interview_data.interview_date, interview_data.notes)
+        application.schedule_interview(
+            interview_date=interview_data.interview_date,
+            interview_type=interview_data.interview_type,
+            interview_location=interview_data.location_or_link,
+            notes=interview_data.notes
+        )
         db.commit()
-        
+
         return {
             "message": "Interview scheduled successfully",
             "interview_date": interview_data.interview_date.isoformat(),
+            "interview_type": interview_data.interview_type,
+            "location_or_link": interview_data.location_or_link,
             "notes": interview_data.notes
         }
         
@@ -463,7 +470,7 @@ async def search_candidates(
     try:
         # Base query for employees with analyzed resumes
         query = db.query(Resume).join(User).filter(
-            User.user_type == UserType.EMPLOYEE,
+            User.user_type == UserType.EMPLOYEE.value,
             User.is_active == True,
             Resume.status == "analyzed",
             Resume.is_active == True
@@ -702,7 +709,7 @@ async def get_ai_candidate_recommendations(
 
         # Get all active employees with analyzed resumes
         resumes = db.query(Resume).join(User).filter(
-            User.user_type == UserType.EMPLOYEE,
+            User.user_type == UserType.EMPLOYEE.value,
             User.is_active == True,
             Resume.status == "analyzed",
             Resume.is_active == True

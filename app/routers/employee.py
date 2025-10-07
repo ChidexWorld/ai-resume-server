@@ -30,7 +30,7 @@ file_service = FileService()
 
 def verify_employee_user(current_user: User = Depends(get_current_active_user)) -> User:
     """Verify that current user is an employee."""
-    if current_user.user_type != UserType.EMPLOYEE:
+    if current_user.user_type != UserType.EMPLOYEE.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This endpoint is only accessible to employees"
