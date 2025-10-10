@@ -258,7 +258,7 @@ async def upload_voice_recording(
 ):
     """
     Upload and analyze a voice recording.
-    Supports WAV, MP3, MP4, M4A, OGG formats.
+    Supports WAV, MP3, MP4, M4A, OGG, FLAC, and WEBM formats.
     """
     try:
         # Validate file type
@@ -267,9 +267,12 @@ async def upload_voice_recording(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No file provided"
             )
-        
+
         file_extension = file.filename.split('.')[-1].lower()
+        print(f"📁 Voice upload: filename='{file.filename}', extension='{file_extension}', content_type='{file.content_type}'")
+
         if file_extension not in settings.allowed_audio_extensions:
+            print(f"❌ Rejected: extension '{file_extension}' not in allowed list: {settings.allowed_audio_extensions}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"File type not supported. Allowed: {', '.join(settings.allowed_audio_extensions)}"

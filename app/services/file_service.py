@@ -117,29 +117,41 @@ class FileService:
     def get_audio_duration(self, file_path: str) -> Optional[float]:
         """
         Get duration of audio file in seconds.
-        
+
         Args:
             file_path: Path to audio file
-            
+
         Returns:
             Duration in seconds or None if failed
         """
         try:
-            # Try with librosa first (more reliable)
+            # Try with wave module for WAV files
             try:
-                y, sr = librosa.load(file_path, sr=None)
-                duration = librosa.get_duration(y=y, sr=sr)
-                return round(duration, 2)
+                with wave.open(file_path, 'r') as wav_file:
+                    frames = wav_file.getnframes()
+                    rate = wav_file.getframerate()
+                    duration = frames / float(rate)
+                    return round(duration, 2)
             except:
-                # Fallback for WAV files
+                # For other audio formats, try to get basic file info
+                # Return a default duration if we can't determine it
                 try:
-                    with wave.open(file_path, 'r') as wav_file:
-                        frames = wav_file.getnframes()
-                        rate = wav_file.getframerate()
-                        duration = frames / float(rate)
+                    import subprocess
+                    result = subprocess.run(
+                        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                         '-of', 'default=noprint_wrappers=1:nokey=1', file_path],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        duration = float(result.stdout.strip())
                         return round(duration, 2)
                 except:
-                    return None
+                    pass
+                # If all else fails, return None (duration check will be skipped)
+                return None
         except Exception:
             return None
     

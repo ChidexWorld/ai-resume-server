@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     max_file_size: int = 25 * 1024 * 1024  # 25MB
     upload_folder: str = "uploads"
     allowed_resume_extensions: List[str] = ["pdf", "doc", "docx", "txt"]
-    allowed_audio_extensions: List[str] = ["wav", "mp3", "mp4", "m4a", "ogg", "flac"]
+    allowed_audio_extensions: List[str] = ["wav", "mp3", "mp4", "m4a", "ogg", "flac", "webm"]
 
     # AI/ML settings
     whisper_model: str = "base"

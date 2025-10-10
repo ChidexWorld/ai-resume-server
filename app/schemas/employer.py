@@ -73,6 +73,12 @@ class VoiceAnalysisResponse(BaseModel):
     is_analyzed: bool
     analysis_status: str
     transcription: Optional[str]
+    duration_seconds: Optional[float] = None  # Frontend expects this field
+    overall_communication_score: Optional[int] = None  # Top-level for frontend
+    clarity_score: Optional[int] = None  # Top-level for frontend
+    confidence_score: Optional[int] = None  # Top-level for frontend
+    fluency_score: Optional[int] = None  # Top-level for frontend
+    pace_score: Optional[int] = None  # Top-level for frontend
     analysis_results: Optional[Dict[str, Any]]
     created_at: str
     updated_at: str
@@ -102,6 +108,17 @@ class VoiceAnalysisResponse(BaseModel):
                 "transcript_stats": voice_analysis.get_transcript_stats()
             }
 
+        # Calculate pace_score from speaking_pace (normalize to 0-100)
+        pace_score = None
+        if voice_analysis.speaking_pace:
+            pace_map = {
+                "slow": 60,
+                "normal": 85,
+                "moderate": 85,
+                "fast": 70
+            }
+            pace_score = pace_map.get(voice_analysis.speaking_pace.lower(), 75)
+
         return cls(
             id=voice_analysis.id,
             employee_id=voice_analysis.employee_id,
@@ -112,6 +129,12 @@ class VoiceAnalysisResponse(BaseModel):
             is_analyzed=voice_analysis.is_completed,
             analysis_status=voice_analysis.status.value,
             transcription=voice_analysis.transcript,
+            duration_seconds=voice_analysis.duration,
+            overall_communication_score=voice_analysis.overall_communication_score,
+            clarity_score=voice_analysis.clarity_score,
+            confidence_score=voice_analysis.confidence_score,
+            fluency_score=voice_analysis.fluency_score,
+            pace_score=pace_score,
             analysis_results=analysis_results,
             created_at=voice_analysis.created_at.isoformat(),
             updated_at=voice_analysis.updated_at.isoformat(),
