@@ -50,7 +50,7 @@ class Settings(BaseSettings):
 
     # CORS settings - use Field to map environment variable
     cors_origins_str: str = Field(
-        default="http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174, https://ai-resume-frontend-d44x.vercel.app",
+        default="http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,https://ai-resume-frontend-d44x.vercel.app",
         alias="CORS_ORIGINS",
     )
 
